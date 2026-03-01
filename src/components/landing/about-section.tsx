@@ -17,6 +17,11 @@ export function AboutSection() {
             little awkward for about fifteen minutes. Then it was one of the best nights I&rsquo;d
             had in months. I&rsquo;ve been doing it ever since.
           </p>
+          <p>
+            Con-Vive is my attempt to make this happen for more people. I personally host many of
+            the dinners (I make a mean ribeye with chimichurri), and I hand-pick every table. This
+            isn&rsquo;t an algorithm &mdash; it&rsquo;s a dinner party, and I take it seriously.
+          </p>
         </div>
       </div>
     </section>
