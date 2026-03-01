@@ -24,7 +24,7 @@ export function NarrativeSection() {
           </div>
           <div className="fade-in-right flex-shrink-0 md:-ml-8 md:w-[45%]">
             <img
-              src="/dinner-party.jpg"
+              src="/table-setting.jpg"
               alt="Friends sharing a meal around a candlelit dinner table"
               className="warm-image warm-shadow w-full rounded-2xl object-cover md:-mr-12 md:max-h-[500px]"
             />

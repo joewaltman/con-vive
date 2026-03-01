@@ -23,13 +23,6 @@ export function HowItWorksSection() {
   return (
     <section className="mx-auto max-w-4xl px-6 py-24">
       <h2 className="heading-1 fade-in-up text-center">How it works</h2>
-      <div className="fade-in-up mx-auto mt-10 mb-16 max-w-sm overflow-hidden rounded-2xl">
-        <img
-          src="/table-setting.jpg"
-          alt="A warm table setting with candles"
-          className="warm-image w-full object-cover"
-        />
-      </div>
       <div className="mt-16 grid gap-12 md:grid-cols-3">
         {steps.map((step) => (
           <div key={step.number} className="fade-in-up stagger-child text-center">
