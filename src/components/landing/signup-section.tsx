@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inputClass =
   "w-full rounded-lg border border-border bg-white px-4 py-3 text-charcoal placeholder:text-warm-gray/60 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta";
@@ -8,6 +8,16 @@ const labelClass = "body-sm mb-1.5 block font-medium text-charcoal";
 
 export function SignupSection() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [utm, setUtm] = useState({ source: "", medium: "", campaign: "" });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setUtm({
+      source: params.get("utm_source") || "",
+      medium: params.get("utm_medium") || "",
+      campaign: params.get("utm_campaign") || "",
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,6 +32,10 @@ export function SignupSection() {
       email: data.get("email"),
       phone: data.get("phone"),
       socialHandle: data.get("socialHandle"),
+      about: data.get("about"),
+      utmSource: utm.source,
+      utmMedium: utm.medium,
+      utmCampaign: utm.campaign,
     };
 
     try {
@@ -65,25 +79,13 @@ export function SignupSection() {
             <label htmlFor="firstName" className={labelClass}>
               First name *
             </label>
-            <input
-              type="text"
-              id="firstName"
-              name="firstName"
-              required
-              className={inputClass}
-            />
+            <input type="text" id="firstName" name="firstName" required className={inputClass} />
           </div>
           <div>
             <label htmlFor="lastName" className={labelClass}>
               Last name *
             </label>
-            <input
-              type="text"
-              id="lastName"
-              name="lastName"
-              required
-              className={inputClass}
-            />
+            <input type="text" id="lastName" name="lastName" required className={inputClass} />
           </div>
         </div>
 
@@ -91,26 +93,14 @@ export function SignupSection() {
           <label htmlFor="email" className={labelClass}>
             Email *
           </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            required
-            className={inputClass}
-          />
+          <input type="email" id="email" name="email" required className={inputClass} />
         </div>
 
         <div>
           <label htmlFor="phone" className={labelClass}>
             Phone number *
           </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            required
-            className={inputClass}
-          />
+          <input type="tel" id="phone" name="phone" required className={inputClass} />
         </div>
 
         <div>
@@ -122,6 +112,19 @@ export function SignupSection() {
             id="socialHandle"
             name="socialHandle"
             placeholder="Facebook, Instagram, or LinkedIn handle"
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="about" className={labelClass}>
+            Tell us a bit about yourself
+          </label>
+          <textarea
+            id="about"
+            name="about"
+            rows={3}
+            placeholder="What do you do? What are you into? What's your ideal dinner conversation?"
             className={inputClass}
           />
         </div>

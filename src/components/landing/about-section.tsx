@@ -10,17 +10,12 @@ export function AboutSection() {
         />
         <div className="body-base space-y-4 text-warm-gray">
           <p>
-            I started Con-Vive because I believe the best conversations happen around a dinner table
-            &mdash; and that most of us don&rsquo;t have enough of them. I moved to Encinitas a few
-            years ago and found that making real friends as an adult is surprisingly hard. So I
-            started hosting dinners for strangers. The first one was a little awkward for about
-            fifteen minutes. Then it was one of the best nights I&rsquo;d had in months. I&rsquo;ve
-            been doing it ever since.
-          </p>
-          <p>
-            Con-Vive is my attempt to make this happen for more people. I personally host many of the
-            dinners (I make a mean ribeye with chimichurri), and I hand-pick every table. This isn&rsquo;t
-            an algorithm &mdash; it&rsquo;s a dinner party, and I take it seriously.
+            I started Con-Vive because I noticed something: everyone I know in North County is
+            interesting, generous, and loves a good meal &mdash; but most of us eat dinner with the
+            same five people every week. I wanted to fix that. So I started hosting dinners and
+            filling the table with people who didn&rsquo;t know each other yet. The first one was a
+            little awkward for about fifteen minutes. Then it was one of the best nights I&rsquo;d
+            had in months. I&rsquo;ve been doing it ever since.
           </p>
         </div>
       </div>

@@ -14,6 +14,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://con-vive.com"),
   title: "Con-Vive — Home-Hosted Dinner Parties in North County San Diego",
   description:
     "Join intimate dinner gatherings with interesting strangers at real homes in Encinitas and North County SD. Great food, real connection, small groups.",

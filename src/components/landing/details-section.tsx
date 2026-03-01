@@ -17,7 +17,7 @@ const faqs = [
   {
     question: "Is it safe?",
     answer:
-      "We have a welcome call with every guest before their first dinner. Our hosts are vetted and verified. And once we launch our full platform, all guests will complete identity verification.",
+      "We have a personal welcome call with every guest before their first dinner. We verify all guests and hosts. Your safety matters to us \u2014 this is someone\u2019s home, and we treat that seriously.",
   },
   {
     question: "Where are the dinners?",
