@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Lora, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
@@ -42,6 +43,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${lora.variable} ${playfairDisplay.variable} antialiased`}>{children}</body>
+      <Script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon='{"token": "516881b937844591aea8d2710eb0ad26"}'
+      />
     </html>
   );
 }
