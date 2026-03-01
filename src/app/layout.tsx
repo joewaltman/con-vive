@@ -44,10 +44,17 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${lora.variable} ${playfairDisplay.variable} antialiased`}>{children}</body>
       <Script
-        defer
-        src="https://static.cloudflareinsights.com/beacon.min.js"
-        data-cf-beacon='{"token": "516881b937844591aea8d2710eb0ad26"}'
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-3CXFWBPY4N"
       />
+      <Script id="gtag-init">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-3CXFWBPY4N');
+        `}
+      </Script>
     </html>
   );
 }
