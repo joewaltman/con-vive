@@ -32,7 +32,6 @@ export async function POST(request: Request) {
               "Last Name": body.lastName,
               Email: body.email,
               Phone: body.phone,
-              "Social Handle": body.socialHandle || "",
               About: body.about || "",
               "UTM Source": body.utmSource || "",
               "UTM Medium": body.utmMedium || "",

@@ -31,7 +31,6 @@ export function SignupSection() {
       lastName: data.get("lastName"),
       email: data.get("email"),
       phone: data.get("phone"),
-      socialHandle: data.get("socialHandle"),
       about: data.get("about"),
       utmSource: utm.source,
       utmMedium: utm.medium,
@@ -101,19 +100,6 @@ export function SignupSection() {
             Phone number *
           </label>
           <input type="tel" id="phone" name="phone" required className={inputClass} />
-        </div>
-
-        <div>
-          <label htmlFor="socialHandle" className={labelClass}>
-            Social media account
-          </label>
-          <input
-            type="text"
-            id="socialHandle"
-            name="socialHandle"
-            placeholder="Facebook, Instagram, or LinkedIn handle"
-            className={inputClass}
-          />
         </div>
 
         <div>
