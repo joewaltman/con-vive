@@ -9,7 +9,7 @@ const steps = [
     number: "2",
     title: "Get invited to dinner",
     description:
-      "We\u2019ll match you with 5\u20137 other guests for an evening at a host\u2019s home. You\u2019ll get the details \u2014 who\u2019s coming, what\u2019s on the menu, and what to bring \u2014 a few days before.",
+      "We\u2019ll match you with 5\u20137 other neighbors for an evening at a host\u2019s home. You\u2019ll get the details \u2014 who\u2019s coming, what\u2019s on the menu, and what to bring \u2014 a few days before.",
   },
   {
     number: "3",
