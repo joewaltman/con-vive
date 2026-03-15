@@ -5,6 +5,14 @@ export function Footer() {
         <p className="font-serif text-lg font-semibold text-charcoal">Con-Vive</p>
         <p className="body-sm text-warm-gray">Encinitas, CA</p>
         <a
+          href="https://instagram.com/convive_dinners"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-warm-gray transition-colors hover:text-terracotta"
+        >
+          @convive_dinners
+        </a>
+        <a
           href="mailto:joe@con-vive.com"
           className="text-warm-gray transition-colors hover:text-terracotta"
         >

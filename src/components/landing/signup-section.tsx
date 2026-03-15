@@ -115,6 +115,28 @@ export function SignupSection() {
           />
         </div>
 
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="privacyPolicy"
+            name="privacyPolicy"
+            required
+            className="mt-1 h-4 w-4 rounded border-border text-terracotta focus:ring-terracotta"
+          />
+          <label htmlFor="privacyPolicy" className="body-sm text-warm-gray">
+            I have read and agree to the{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-terracotta underline hover:opacity-80"
+            >
+              Privacy Policy
+            </a>{" "}
+            *
+          </label>
+        </div>
+
         <button
           type="submit"
           disabled={status === "submitting"}
