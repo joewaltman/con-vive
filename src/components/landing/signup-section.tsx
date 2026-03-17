@@ -31,6 +31,8 @@ export function SignupSection() {
       lastName: data.get("lastName"),
       email: data.get("email"),
       phone: data.get("phone"),
+      ageRange: data.get("ageRange"),
+      whatDoYouDo: data.get("whatDoYouDo"),
       about: data.get("about"),
       utmSource: utm.source,
       utmMedium: utm.medium,
@@ -100,6 +102,28 @@ export function SignupSection() {
             Phone number *
           </label>
           <input type="tel" id="phone" name="phone" required className={inputClass} />
+        </div>
+
+        <div>
+          <label htmlFor="ageRange" className={labelClass}>
+            Age Range *
+          </label>
+          <select id="ageRange" name="ageRange" required className={inputClass}>
+            <option value="">Select...</option>
+            <option value="Under 30">Under 30</option>
+            <option value="30-39">30-39</option>
+            <option value="40-49">40-49</option>
+            <option value="50-59">50-59</option>
+            <option value="60-69">60-69</option>
+            <option value="70+">70+</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="whatDoYouDo" className={labelClass}>
+            What Do You Do *
+          </label>
+          <input type="text" id="whatDoYouDo" name="whatDoYouDo" required className={inputClass} />
         </div>
 
         <div>
