@@ -6,7 +6,7 @@ export function NarrativeSection() {
         <div className="mt-12 flex flex-col gap-10 md:flex-row md:items-center">
           <div className="fade-in-left body-lg flex-1 space-y-6 text-warm-gray">
             <p>
-              You arrive at a home in Encinitas on a Saturday evening. The kitchen smells incredible
+              You arrive at a home in Leucadia on a weeknight. The kitchen smells incredible
               &mdash; your host has been slow-braising lamb all afternoon. You don&rsquo;t know
               anyone yet, but within ten minutes you&rsquo;re deep in conversation with a marine
               biologist who just moved from Boston and a couple who run a surf shop in Leucadia.

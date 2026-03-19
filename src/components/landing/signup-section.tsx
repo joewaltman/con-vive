@@ -32,8 +32,8 @@ export function SignupSection() {
       email: data.get("email"),
       phone: data.get("phone"),
       ageRange: data.get("ageRange"),
-      whatDoYouDo: data.get("whatDoYouDo"),
-      about: data.get("about"),
+      comingSolo: data.get("comingSolo"),
+      currentObsession: data.get("currentObsession"),
       utmSource: utm.source,
       utmMedium: utm.medium,
       utmCampaign: utm.campaign,
@@ -120,21 +120,27 @@ export function SignupSection() {
         </div>
 
         <div>
-          <label htmlFor="whatDoYouDo" className={labelClass}>
-            What Do You Do *
+          <label htmlFor="comingSolo" className={labelClass}>
+            Coming solo or with someone? *
           </label>
-          <input type="text" id="whatDoYouDo" name="whatDoYouDo" required className={inputClass} />
+          <select id="comingSolo" name="comingSolo" required className={inputClass}>
+            <option value="">Select...</option>
+            <option value="Solo">Solo</option>
+            <option value="With a partner">With a partner</option>
+            <option value="With a friend">With a friend</option>
+          </select>
         </div>
 
         <div>
-          <label htmlFor="about" className={labelClass}>
-            Tell us a bit about yourself
+          <label htmlFor="currentObsession" className={labelClass}>
+            What are you obsessed with right now? *
           </label>
           <textarea
-            id="about"
-            name="about"
+            id="currentObsession"
+            name="currentObsession"
             rows={3}
-            placeholder="What do you do? What are you into? What's your ideal dinner conversation?"
+            required
+            placeholder="Could be a hobby, an idea, a project, a rabbit hole. Bonus points for the why."
             className={inputClass}
           />
         </div>

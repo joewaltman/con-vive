@@ -12,7 +12,7 @@ const faqs = [
   {
     question: "What about dietary restrictions?",
     answer:
-      "We ask about dietary needs during the 5-minute welcome call and make sure the menu works for everyone at the table. Just let us know.",
+      "We ask about dietary needs during the welcome call and make sure the menu works for everyone at the table. Just let us know.",
   },
   {
     question: "Is it safe?",
@@ -22,7 +22,7 @@ const faqs = [
   {
     question: "Where are the dinners?",
     answer:
-      "For now, in Encinitas. As we grow, we\u2019ll expand to other North County neighborhoods \u2014 Carlsbad, Solana Beach, Del Mar, Cardiff, and beyond.",
+      "For now, mostly in Leucadia and Encinitas. As we grow, we\u2019ll expand to other North County neighborhoods \u2014 Carlsbad, Solana Beach, Del Mar, Cardiff, and beyond.",
   },
   {
     question: "Can I come with a friend or partner?",

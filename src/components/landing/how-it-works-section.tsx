@@ -3,7 +3,7 @@ const steps = [
     number: "1",
     title: "Sign up and say hello",
     description:
-      "Fill out a quick profile and hop on a 5-minute welcome call with Joe, our founder. We want to know what makes you interesting \u2014 not just your dietary restrictions.",
+      "Fill out a short profile and hop on a quick 5-10 minute welcome call with Joe, our founder. We ask a couple of real questions so we can put you at the right table. Not everyone makes the cut, but that's what makes the dinners good.",
   },
   {
     number: "2",
