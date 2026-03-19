@@ -32,7 +32,6 @@ export function SignupSection() {
       email: data.get("email"),
       phone: data.get("phone"),
       ageRange: data.get("ageRange"),
-      comingSolo: data.get("comingSolo"),
       currentObsession: data.get("currentObsession"),
       utmSource: utm.source,
       utmMedium: utm.medium,
@@ -116,18 +115,6 @@ export function SignupSection() {
             <option value="50-59">50-59</option>
             <option value="60-69">60-69</option>
             <option value="70+">70+</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="comingSolo" className={labelClass}>
-            Coming solo or with someone? *
-          </label>
-          <select id="comingSolo" name="comingSolo" required className={inputClass}>
-            <option value="">Select...</option>
-            <option value="Solo">Solo</option>
-            <option value="With a partner">With a partner</option>
-            <option value="With a friend">With a friend</option>
           </select>
         </div>
 

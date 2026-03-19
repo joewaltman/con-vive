@@ -4,8 +4,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const { firstName, lastName, email, phone, ageRange, comingSolo, currentObsession } = body;
-    if (!firstName || !lastName || !email || !phone || !ageRange || !comingSolo || !currentObsession) {
+    const { firstName, lastName, email, phone, ageRange, currentObsession } = body;
+    if (!firstName || !lastName || !email || !phone || !ageRange || !currentObsession) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -33,7 +33,6 @@ export async function POST(request: Request) {
               Email: body.email,
               Phone: body.phone,
               "Age Range": body.ageRange,
-              "Coming Solo": body.comingSolo,
               "Current Obsession": body.currentObsession,
               "UTM Source": body.utmSource || "",
               "UTM Medium": body.utmMedium || "",
