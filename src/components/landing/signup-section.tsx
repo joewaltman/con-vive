@@ -120,16 +120,19 @@ export function SignupSection() {
 
         <div>
           <label htmlFor="currentObsession" className={labelClass}>
-            What are you obsessed with right now? *
+            What are you obsessed with right now? <span className="italic font-normal">(e.g., "Trying to perfect my grandmother's mole recipe — I've made it six times and I'm still missing something")</span> *
           </label>
           <textarea
             id="currentObsession"
             name="currentObsession"
             rows={3}
             required
-            placeholder="Could be a hobby, an idea, a project, a rabbit hole. Bonus points for the why."
+            placeholder="Something you'd talk about for 20 minutes if someone asked. The weirder or more specific, the better. Tell us why it matters to you."
             className={inputClass}
           />
+          <p className="body-sm text-warm-gray mt-1.5">
+            Don't hold back. The good stuff is in the details, and it helps us put the right people at your table.
+          </p>
         </div>
 
         <div className="flex items-start gap-3">
