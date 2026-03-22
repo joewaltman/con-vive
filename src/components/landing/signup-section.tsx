@@ -120,18 +120,18 @@ export function SignupSection() {
 
         <div>
           <label htmlFor="currentObsession" className={labelClass}>
-            What are you obsessed with right now? <span className="italic font-normal">(e.g., "Trying to perfect my grandmother's mole recipe — I've made it six times and I'm still missing something")</span> *
+            What's one thing about you that would hold a table of strangers for 10-20 minutes? *
           </label>
           <textarea
             id="currentObsession"
             name="currentObsession"
             rows={3}
             required
-            placeholder="Something you'd talk about for 20 minutes if someone asked. The weirder or more specific, the better. Tell us why it matters to you."
+            placeholder="It doesn't have to be glamorous. A 911 dispatcher who moonlights as a beekeeper. A retired engineer who just walked 3,000km across France. A software guy who makes his own charcuterie. What's yours?"
             className={inputClass}
           />
           <p className="body-sm text-warm-gray mt-1.5">
-            Don't hold back. The good stuff is in the details, and it helps us put the right people at your table.
+            Con-Vive dinners are small and carefully curated. We read every response personally. This is the question that matters most.
           </p>
         </div>
 
