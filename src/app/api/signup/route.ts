@@ -33,7 +33,7 @@ export async function POST(request: Request) {
               Email: body.email,
               Phone: body.phone,
               "Age Range": body.ageRange,
-              "Current Obsession": body.currentObsession,
+              "OneThing": body.currentObsession,
               "UTM Source": body.utmSource || "",
               "UTM Medium": body.utmMedium || "",
               "UTM Campaign": body.utmCampaign || "",
