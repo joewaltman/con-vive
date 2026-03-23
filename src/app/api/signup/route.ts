@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
 
+function sanitizePhone(value: string): string {
+  // Strip all non-digits
+  let digits = value.replace(/\D/g, "");
+  // If starts with 1 and is 11 digits, strip the leading 1
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+  return digits;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -7,6 +17,12 @@ export async function POST(request: Request) {
     const { firstName, lastName, email, phone, ageRange, currentObsession } = body;
     if (!firstName || !lastName || !email || !phone || !ageRange || !currentObsession) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Sanitize and validate phone number
+    const cleanPhone = sanitizePhone(phone);
+    if (cleanPhone.length !== 10) {
+      return NextResponse.json({ error: "Invalid phone number. Please enter a valid 10-digit US phone number." }, { status: 400 });
     }
 
     const token = process.env.AIRTABLE_API_TOKEN;
@@ -31,7 +47,7 @@ export async function POST(request: Request) {
               "First Name": body.firstName,
               "Last Name": body.lastName,
               Email: body.email,
-              Phone: body.phone,
+              Phone: cleanPhone,
               "Age Range": body.ageRange,
               "OneThing": body.currentObsession,
               "UTM Source": body.utmSource || "",

@@ -6,9 +6,29 @@ const inputClass =
   "w-full rounded-lg border border-border bg-white px-4 py-3 text-charcoal placeholder:text-warm-gray/60 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta";
 const labelClass = "body-sm mb-1.5 block font-medium text-charcoal";
 
+function formatPhoneNumber(digits: string): string {
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+function sanitizePhone(value: string): string {
+  // Strip all non-digits
+  let digits = value.replace(/\D/g, "");
+  // If starts with 1 and is 11 digits, strip the leading 1
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+  return digits;
+}
+
 export function SignupSection() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [utm, setUtm] = useState({ source: "", medium: "", campaign: "" });
+  const [phone, setPhone] = useState("");
+  const [phoneDigits, setPhoneDigits] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -19,8 +39,32 @@ export function SignupSection() {
     });
   }, []);
 
+  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digits = sanitizePhone(e.target.value).slice(0, 10);
+    setPhoneDigits(digits);
+    setPhone(formatPhoneNumber(digits));
+    if (phoneError && digits.length === 10) {
+      setPhoneError("");
+    }
+  }
+
+  function handlePhoneBlur() {
+    if (phoneDigits.length > 0 && phoneDigits.length !== 10) {
+      setPhoneError("Please enter a valid 10-digit US phone number");
+    } else {
+      setPhoneError("");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Validate phone before submitting
+    if (phoneDigits.length !== 10) {
+      setPhoneError("Please enter a valid 10-digit US phone number");
+      return;
+    }
+
     setStatus("submitting");
 
     const form = e.currentTarget;
@@ -30,7 +74,7 @@ export function SignupSection() {
       firstName: data.get("firstName"),
       lastName: data.get("lastName"),
       email: data.get("email"),
-      phone: data.get("phone"),
+      phone: phoneDigits,
       ageRange: data.get("ageRange"),
       currentObsession: data.get("currentObsession"),
       utmSource: utm.source,
@@ -100,7 +144,22 @@ export function SignupSection() {
           <label htmlFor="phone" className={labelClass}>
             Phone number *
           </label>
-          <input type="tel" id="phone" name="phone" required className={inputClass} />
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            required
+            value={phone}
+            onChange={handlePhoneChange}
+            onBlur={handlePhoneBlur}
+            inputMode="numeric"
+            maxLength={14}
+            placeholder="(555) 555-5555"
+            className={inputClass}
+          />
+          {phoneError && (
+            <p className="body-sm text-red-600 mt-1.5">{phoneError}</p>
+          )}
         </div>
 
         <div>
