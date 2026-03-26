@@ -125,7 +125,7 @@ export function SignupSection() {
     const newErrors: Record<string, string> = {};
     if (!formData.curiousAbout.trim()) newErrors.curiousAbout = "This field is required";
     if (!formData.surprisingKnowledge.trim()) newErrors.surprisingKnowledge = "This field is required";
-    if (!formData.privacyAccepted) newErrors.privacyAccepted = "You must accept the privacy policy";
+    if (!formData.privacyAccepted) newErrors.privacyAccepted = "You must accept the Terms of Service and Privacy Policy";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -472,7 +472,7 @@ export function SignupSection() {
                   rel="noopener noreferrer"
                   className="text-terracotta underline hover:opacity-80"
                 >
-                  Privacy Policy
+                  Terms of Service and Privacy Policy
                 </a>{" "}
                 *
               </label>
