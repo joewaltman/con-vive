@@ -1,105 +1,77 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { stripe, RESERVATION_PRICE, getBaseUrl } from "@/lib/stripe";
 
-interface VerifiedPageProps {
-  searchParams: Promise<{ session_id?: string }>;
-}
+export default function VerifiedPage() {
+  const [status, setStatus] = useState<"loading" | "processing" | "requires_input" | "verified" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [continueUrl, setContinueUrl] = useState("");
 
-export default async function VerifiedPage({ searchParams }: VerifiedPageProps) {
-  const params = await searchParams;
-  const sessionId = params.session_id;
+  useEffect(() => {
+    async function checkVerification() {
+      // Get session ID from URL or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      let sessionId = urlParams.get("session_id");
 
-  if (!sessionId) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <h1 className="heading-1 text-charcoal">Something went wrong</h1>
-        <p className="body-base mt-4 text-warm-gray">
-          We couldn&rsquo;t find your verification session.
-        </p>
-        <Link
-          href="/reserve"
-          className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
-        >
-          Start over
-        </Link>
-      </div>
-    );
-  }
-
-  let verificationSession;
-  try {
-    verificationSession = await stripe.identity.verificationSessions.retrieve(sessionId);
-  } catch (error) {
-    console.error("Failed to retrieve verification session:", error);
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <h1 className="heading-1 text-charcoal">Something went wrong</h1>
-        <p className="body-base mt-4 text-warm-gray">
-          We couldn&rsquo;t retrieve your verification status.
-        </p>
-        <Link
-          href="/reserve"
-          className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
-        >
-          Try again
-        </Link>
-      </div>
-    );
-  }
-
-  const status = verificationSession.status;
-
-  if (status === "verified") {
-    const baseUrl = getBaseUrl();
-    const email = verificationSession.metadata?.email || "";
-    const name = verificationSession.metadata?.name || "";
-
-    try {
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_creation: "always",
-        billing_address_collection: "required",
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: { name: "Con-Vive Dinner Reservation" },
-              unit_amount: RESERVATION_PRICE,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          verification_session_id: sessionId,
-          guest_email: email,
-          guest_name: name,
-        },
-        success_url: `${baseUrl}/reserve/confirmed?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/reserve/cancelled`,
-      });
-
-      if (checkoutSession.url) {
-        redirect(checkoutSession.url);
+      // If URL has placeholder or no session_id, check localStorage
+      if (!sessionId || sessionId === "{VERIFICATION_SESSION_ID}") {
+        sessionId = localStorage.getItem("verification_session_id");
       }
-    } catch (error) {
-      console.error("Failed to create checkout session:", error);
-      return (
-        <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          <h1 className="heading-1 text-charcoal">Payment setup failed</h1>
-          <p className="body-base mt-4 text-warm-gray">
-            Your identity was verified, but we couldn&rsquo;t set up the payment.
-            Please try again or contact us.
-          </p>
-          <Link
-            href="/reserve"
-            className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
-          >
-            Try again
-          </Link>
-        </div>
-      );
+
+      if (!sessionId) {
+        setErrorMessage("We couldn't find your verification session.");
+        setStatus("error");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/reserve/check-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setErrorMessage(data.error || "Something went wrong.");
+          setStatus("error");
+          return;
+        }
+
+        if (data.checkoutUrl) {
+          // Clear localStorage and redirect to checkout
+          localStorage.removeItem("verification_session_id");
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+
+        if (data.status === "processing") {
+          setStatus("processing");
+        } else if (data.status === "requires_input") {
+          setStatus("requires_input");
+          setContinueUrl(data.continueUrl || "");
+        } else {
+          setErrorMessage("Verification was not successful.");
+          setStatus("error");
+        }
+      } catch {
+        setErrorMessage("Network error. Please try again.");
+        setStatus("error");
+      }
     }
+
+    checkVerification();
+  }, []);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <h1 className="heading-1 text-charcoal">Checking verification...</h1>
+        <p className="body-base mt-4 text-warm-gray">Please wait a moment.</p>
+      </div>
+    );
   }
 
   if (status === "processing") {
@@ -109,12 +81,12 @@ export default async function VerifiedPage({ searchParams }: VerifiedPageProps) 
         <p className="body-base mt-4 text-warm-gray">
           We&rsquo;re still reviewing your documents. This usually takes just a moment.
         </p>
-        <Link
-          href={`/reserve/verified?session_id=${sessionId}`}
+        <button
+          onClick={() => window.location.reload()}
           className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
         >
           Check status
-        </Link>
+        </button>
       </div>
     );
   }
@@ -126,9 +98,9 @@ export default async function VerifiedPage({ searchParams }: VerifiedPageProps) 
         <p className="body-base mt-4 text-warm-gray">
           We need a bit more information to complete your verification.
         </p>
-        {verificationSession.url && (
+        {continueUrl && (
           <a
-            href={verificationSession.url}
+            href={continueUrl}
             className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
           >
             Continue verification
@@ -138,14 +110,11 @@ export default async function VerifiedPage({ searchParams }: VerifiedPageProps) 
     );
   }
 
-  // Status: canceled or other failure
+  // Error state
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <h1 className="heading-1 text-charcoal">Verification unsuccessful</h1>
-      <p className="body-base mt-4 text-warm-gray">
-        We weren&rsquo;t able to verify your identity. Please try again or contact us
-        for assistance.
-      </p>
+      <h1 className="heading-1 text-charcoal">Something went wrong</h1>
+      <p className="body-base mt-4 text-warm-gray">{errorMessage}</p>
       <Link
         href="/reserve"
         className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"

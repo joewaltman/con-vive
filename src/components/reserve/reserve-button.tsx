@@ -35,7 +35,9 @@ export function ReserveButton({ email, name }: ReserveButtonProps) {
 
       const data = await res.json();
 
-      if (data.url) {
+      if (data.url && data.sessionId) {
+        // Store session ID in localStorage for retrieval after Stripe redirect
+        localStorage.setItem("verification_session_id", data.sessionId);
         window.location.href = data.url;
       } else {
         setErrorMessage("Failed to start verification. Please try again.");
