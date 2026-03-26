@@ -44,21 +44,13 @@ export default async function ConfirmedPage({ searchParams }: ConfirmedPageProps
                 1
               </span>
               <span>
-                You&rsquo;ll receive a confirmation email with your receipt shortly.
-              </span>
-            </li>
-            <li className="body-base flex items-start gap-3 text-charcoal">
-              <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-terracotta/10 text-sm font-medium text-terracotta">
-                2
-              </span>
-              <span>
                 A few days before the dinner, we&rsquo;ll send you the exact location and
                 any details you need to know.
               </span>
             </li>
             <li className="body-base flex items-start gap-3 text-charcoal">
               <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-terracotta/10 text-sm font-medium text-terracotta">
-                3
+                2
               </span>
               <span>
                 Show up hungry and ready for great conversation!
