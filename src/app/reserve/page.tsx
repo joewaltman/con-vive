@@ -23,21 +23,6 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
         <div className="mt-8 rounded-xl border border-border bg-white p-6">
           <div className="text-4xl font-bold text-terracotta">{priceDisplay}</div>
           <p className="body-sm mt-1 text-warm-gray">per person</p>
-
-          <ul className="mt-6 space-y-3 text-left">
-            <li className="body-base flex items-start gap-3 text-charcoal">
-              <span className="mt-1 text-terracotta">&#10003;</span>
-              Multi-course dinner with wine pairings
-            </li>
-            <li className="body-base flex items-start gap-3 text-charcoal">
-              <span className="mt-1 text-terracotta">&#10003;</span>
-              Curated group of 8-10 guests
-            </li>
-            <li className="body-base flex items-start gap-3 text-charcoal">
-              <span className="mt-1 text-terracotta">&#10003;</span>
-              Intimate venue in Austin
-            </li>
-          </ul>
         </div>
 
         <div className="mt-8">
