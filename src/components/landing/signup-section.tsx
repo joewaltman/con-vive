@@ -359,17 +359,21 @@ export function SignupSection() {
             <div>
               <label className={labelClass}>Who&rsquo;s coming to dinner? *</label>
               <div className="mt-2 space-y-2">
-                {["Just me", "Me + my partner", "Me + a friend"].map((option) => (
-                  <label key={option} className="flex items-center gap-3 cursor-pointer">
+                {[
+                  { label: "Just me", value: "Solo" },
+                  { label: "Me + my partner", value: "With my partner" },
+                  { label: "Me + a friend", value: "With a friend" },
+                ].map((option) => (
+                  <label key={option.value} className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="soloOrCouple"
-                      value={option}
-                      checked={formData.soloOrCouple === option}
+                      value={option.value}
+                      checked={formData.soloOrCouple === option.value}
                       onChange={(e) => updateField("soloOrCouple", e.target.value)}
                       className="h-4 w-4 border-border text-terracotta focus:ring-terracotta"
                     />
-                    <span className="body-base text-charcoal">{option}</span>
+                    <span className="body-base text-charcoal">{option.label}</span>
                   </label>
                 ))}
               </div>
