@@ -37,10 +37,17 @@ export async function POST(request: Request) {
         email: email || "",
         name: name || "",
       },
-      return_url: `${baseUrl}/reserve/verified?session_id={VERIFICATION_SESSION_ID}`,
     });
 
-    return NextResponse.json({ url: verificationSession.url });
+    // Update the session with return_url containing the actual session ID
+    const updatedSession = await stripe.identity.verificationSessions.update(
+      verificationSession.id,
+      {
+        return_url: `${baseUrl}/reserve/verified?session_id=${verificationSession.id}`,
+      }
+    );
+
+    return NextResponse.json({ url: updatedSession.url });
   } catch (error) {
     console.error("Reserve start error:", error);
     return NextResponse.json(
