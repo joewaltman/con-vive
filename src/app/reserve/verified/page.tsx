@@ -55,31 +55,50 @@ export default async function VerifiedPage({ searchParams }: VerifiedPageProps) 
     const email = verificationSession.metadata?.email || "";
     const name = verificationSession.metadata?.name || "";
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_creation: "always",
-      billing_address_collection: "required",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: "Con-Vive Dinner Reservation" },
-            unit_amount: RESERVATION_PRICE,
+    try {
+      const checkoutSession = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer_creation: "always",
+        billing_address_collection: "required",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: { name: "Con-Vive Dinner Reservation" },
+              unit_amount: RESERVATION_PRICE,
+            },
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          verification_session_id: sessionId,
+          guest_email: email,
+          guest_name: name,
         },
-      ],
-      metadata: {
-        verification_session_id: sessionId,
-        guest_email: email,
-        guest_name: name,
-      },
-      success_url: `${baseUrl}/reserve/confirmed?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/reserve/cancelled`,
-    });
+        success_url: `${baseUrl}/reserve/confirmed?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/reserve/cancelled`,
+      });
 
-    if (checkoutSession.url) {
-      redirect(checkoutSession.url);
+      if (checkoutSession.url) {
+        redirect(checkoutSession.url);
+      }
+    } catch (error) {
+      console.error("Failed to create checkout session:", error);
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+          <h1 className="heading-1 text-charcoal">Payment setup failed</h1>
+          <p className="body-base mt-4 text-warm-gray">
+            Your identity was verified, but we couldn&rsquo;t set up the payment.
+            Please try again or contact us.
+          </p>
+          <Link
+            href="/reserve"
+            className="mt-8 inline-block rounded-full bg-terracotta px-8 py-3 text-cream transition-opacity hover:opacity-90"
+          >
+            Try again
+          </Link>
+        </div>
+      );
     }
   }
 
