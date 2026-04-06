@@ -6,50 +6,50 @@ export interface Guest {
 export const guests: Guest[] = [
   {
     name: "Aaron",
-    bio: "Software engineer who loves hiking and craft beer. Always up for a good conversation about technology or the outdoors.",
+    bio: "Marine Corps intelligence veteran who deployed to Iraq, Pakistan, and the Horn of Africa. Now works in tech security compliance. Dad, self-described huge nerd (Dune fanatic), and the kind of person who asks an artist what they were feeling when they painted something.",
   },
   {
     name: "Alex",
-    bio: "Creative director with a passion for travel photography. Spent last year exploring Southeast Asia.",
+    bio: "Just moved to Leucadia from Boston. Works in marketing and recently started a production company with his brother. Has lived in the Caribbean and dreams of running a taco boat.",
   },
   {
     name: "Janice",
-    bio: "Retired teacher turned pottery enthusiast. Believes every meal is better when shared with good company.",
+    bio: "Manages a private equity fund but somehow also finds time to surf, paint, play the fiddle, practice martial arts, hike, golf, and bike.",
   },
   {
     name: "Jennifer",
-    bio: "Healthcare consultant and amateur chef. Hosting dinner parties is her love language.",
+    bio: "Works in sales ops at HOKA, previously ran her own slow fashion brand. Her husband brews beer at Viewpoint Brewing in Del Mar. 14-year Leucadia local who loves connecting community.",
   },
   {
     name: "Kimberly",
-    bio: "Real estate investor and yoga instructor. Moved to Encinitas five years ago and never looked back.",
+    bio: "Retired after 25 years as political director at AARP's advocacy division. Lived in Mexico, has four grown kids scattered across Germany, Miami, NYC, and LA. Cooks recipes from every culture and era.",
   },
   {
     name: "Lori",
-    bio: "Marketing strategist and book club organizer. Can recommend a great read for any mood.",
+    bio: "CIA-trained (Culinary Institute of America) food scientist who spent 33 years leading culinary innovation at Jack in the Box, Taco Bell, Burger King, and Wendy's. San Diego native who built multiple homes on Avocado Street in Leucadia.",
   },
   {
     name: "Matt",
-    bio: "Entrepreneur and surfer. Building his third startup while chasing waves at Swami's.",
+    bio: "Atlantic City native, 34 years in San Diego. Part-time airline employee (for the flight benefits), real estate appraiser, Airbnb host, ex-cannabis grower, and world surf traveler. Lived in Baja for 11 years. Plenty of stories from Australia to Zimbabwe.",
   },
   {
     name: "Reggie",
-    bio: "Architect with a love for mid-century modern design. Restoring a 1962 Eichler in his spare time.",
+    bio: "Real estate agent who recently moved to North County from central San Diego. Loves food, and his main conversational goal is making people laugh.",
   },
   {
     name: "Robb",
-    bio: "Financial advisor and barbecue pit master. Takes his brisket as seriously as his portfolio advice.",
+    bio: "Recently retired from engineering leadership in life sciences and manufacturing. Now every day is Saturday — he mountain bikes, builds furniture, and paraglides in the mountains (not Torrey Pines — he prefers real altitude).",
   },
   {
     name: "Robert",
-    bio: "Physician and jazz enthusiast. Plays saxophone at open mic nights around North County.",
+    bio: "Keynote speaker on company culture and customer service, author, and deep into AI and vibe coding. Loves thinking about how to turn anything into a game.",
   },
   {
     name: "Terry",
-    bio: "Former tech executive now focused on mentoring young founders. Passionate about community building.",
+    bio: "Retired preschool admissions director, married to a retired Marine Corps officer. Quilts, travels extensively, and has 9 grandchildren. They host large events and live close by off Pinto Beach in Carlsbad.",
   },
   {
     name: "Zoia",
-    bio: "Interior designer originally from Eastern Europe. Brings a global perspective to every conversation.",
+    bio: "Nurse turned property manager. Lives in Leucadia with her two daughters (one at SDSU, one at SDA playing volleyball).",
   },
 ];
