@@ -33,13 +33,18 @@ function AboutSection() {
       <div className="fade-in-up rounded-lg border border-border bg-white/50 p-8 text-center">
         <h2 className="heading-2 text-charcoal">About This Dinner</h2>
         <p className="body-base mt-6 text-warm-gray">
-          This dinner is a bit different from our usual intimate gatherings. We&apos;re bringing together
-          a larger group — two tables, dinner party style — with people who might be interested in
-          hosting future Con-Vive dinners.
+          The response to Con-Vive has been way bigger than expected — hundreds of signups and only
+          so many tables to go around. This dinner is a little different. We&apos;ve invited a larger
+          group of people who are interested in hosting their own Con-Vive dinners, so instead of the
+          usual intimate table of 6-8, you&apos;ll be part of a bigger gathering — two tables, food you
+          can eat standing or moving around, and a chance to mingle with everyone.
         </p>
         <p className="body-base mt-4 text-warm-gray">
-          No pressure, no pitch. Just come enjoy the evening, meet some great people, and see what
-          a Con-Vive dinner feels like from the inside.
+          Think of it less as a seated dinner and more as a dinner party. The goal is the same as
+          always: good food, real conversation, and meeting people you wouldn&apos;t have met otherwise.
+        </p>
+        <p className="body-base mt-4 text-warm-gray">
+          If hosting feels right after tonight, we&apos;ll talk about what that looks like. No pressure.
         </p>
       </div>
     </section>
