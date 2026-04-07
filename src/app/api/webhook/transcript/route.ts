@@ -50,10 +50,16 @@ export async function POST(request: Request) {
       [body.phone_clean]
     );
 
+    // Debug: check what's in the database
+    const debugResult = await query<{ count: string; sample_phones: string }>(
+      "SELECT COUNT(*) as count, string_agg(phone_clean, ', ' ORDER BY id DESC) as sample_phones FROM (SELECT phone_clean FROM guests WHERE phone_clean IS NOT NULL LIMIT 5) t"
+    );
+    console.log(`[Webhook] Debug - Total guests with phone_clean: ${debugResult?.[0]?.count}, samples: ${debugResult?.[0]?.sample_phones}`);
+
     if (!guestResult || guestResult.length === 0) {
       console.log(`[Webhook] Guest not found for phone_clean: ${body.phone_clean}`);
       return NextResponse.json(
-        { error: "Guest not found", phone_clean: body.phone_clean },
+        { error: "Guest not found", phone_clean: body.phone_clean, debug: debugResult?.[0] },
         { status: 404 }
       );
     }
