@@ -28,6 +28,7 @@ export function getPool(): Pool | null {
 export async function query<T>(text: string, params?: unknown[]): Promise<T[] | null> {
   const pool = getPool();
   if (!pool) {
+    console.error("PostgreSQL: No pool available (DATABASE_URL not set?)");
     return null;
   }
 
@@ -36,6 +37,18 @@ export async function query<T>(text: string, params?: unknown[]): Promise<T[] | 
     return result.rows as T[];
   } catch (error) {
     console.error("PostgreSQL query error:", error);
+    console.error("Query was:", text.substring(0, 200));
     return null;
   }
+}
+
+// Query that throws on error (for debugging)
+export async function queryOrThrow<T>(text: string, params?: unknown[]): Promise<T[]> {
+  const pool = getPool();
+  if (!pool) {
+    throw new Error("PostgreSQL: No pool available (DATABASE_URL not set)");
+  }
+
+  const result = await pool.query(text, params);
+  return result.rows as T[];
 }

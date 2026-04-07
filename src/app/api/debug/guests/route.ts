@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { queryOrThrow } from "@/lib/db";
 
 export async function GET(request: Request) {
   // Only allow with webhook secret for security
@@ -16,18 +16,18 @@ export async function GET(request: Request) {
   try {
     if (phone) {
       // Search by phone
-      const result = await query<{ id: number; first_name: string; last_name: string; phone: string; phone_clean: string }>(
+      const result = await queryOrThrow<{ id: number; first_name: string; last_name: string; phone: string; phone_clean: string }>(
         "SELECT id, first_name, last_name, phone, phone_clean FROM guests WHERE phone_clean = $1 OR phone LIKE $2 LIMIT 5",
         [phone, `%${phone}%`]
       );
       return NextResponse.json({ query: "by_phone", phone, results: result });
     } else {
       // Get sample of guests with phone_clean
-      const result = await query<{ id: number; first_name: string; last_name: string; phone: string; phone_clean: string }>(
+      const result = await queryOrThrow<{ id: number; first_name: string; last_name: string; phone: string; phone_clean: string }>(
         "SELECT id, first_name, last_name, phone, phone_clean FROM guests WHERE phone_clean IS NOT NULL LIMIT 10"
       );
-      const count = await query<{ count: string }>("SELECT COUNT(*) as count FROM guests");
-      const withPhone = await query<{ count: string }>("SELECT COUNT(*) as count FROM guests WHERE phone_clean IS NOT NULL AND phone_clean != ''");
+      const count = await queryOrThrow<{ count: string }>("SELECT COUNT(*) as count FROM guests");
+      const withPhone = await queryOrThrow<{ count: string }>("SELECT COUNT(*) as count FROM guests WHERE phone_clean IS NOT NULL AND phone_clean != ''");
 
       return NextResponse.json({
         total_guests: count?.[0]?.count,
@@ -36,6 +36,6 @@ export async function GET(request: Request) {
       });
     }
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    return NextResponse.json({ error: String(error), stack: (error as Error).stack }, { status: 500 });
   }
 }
