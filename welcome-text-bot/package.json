@@ -1,0 +1,17 @@
+{
+  "name": "welcome-text-bot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx tsx send-welcome-texts.ts",
+    "dry-run": "npx tsx send-welcome-texts.ts --dry-run"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
