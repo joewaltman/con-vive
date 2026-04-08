@@ -465,6 +465,7 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
                 value={formData.curiousAbout}
                 onChange={(e) => updateField("curiousAbout", e.target.value)}
                 rows={4}
+                placeholder="Could be anything — a podcast topic, a question that's been on your mind, something you want to learn more about..."
                 className={inputClass}
               />
               {errors.curiousAbout && <p className={errorClass}>{errors.curiousAbout}</p>}
