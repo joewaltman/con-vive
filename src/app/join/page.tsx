@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/landing/header";
 import { SignupSection } from "@/components/landing/signup-section";
@@ -18,7 +18,7 @@ interface ResumeData {
   available_days: string[] | null;
 }
 
-export default function JoinPage() {
+function JoinContent() {
   const searchParams = useSearchParams();
   const resumeToken = searchParams.get("resume");
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
@@ -38,20 +38,28 @@ export default function JoinPage() {
 
   if (loading) {
     return (
-      <main>
-        <Header />
-        <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-          <p className="text-warm-gray">Loading...</p>
-        </div>
-        <Footer />
-      </main>
+      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+        <p className="text-warm-gray">Loading...</p>
+      </div>
     );
   }
 
+  return <SignupSection resumeData={resumeData} />;
+}
+
+export default function JoinPage() {
   return (
     <main>
       <Header />
-      <SignupSection resumeData={resumeData} />
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+            <p className="text-warm-gray">Loading...</p>
+          </div>
+        }
+      >
+        <JoinContent />
+      </Suspense>
       <Footer />
     </main>
   );
