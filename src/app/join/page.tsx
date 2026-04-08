@@ -1,19 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/landing/header";
 import { SignupSection } from "@/components/landing/signup-section";
 import { Footer } from "@/components/landing/footer";
-import { query } from "@/lib/db";
-
-interface GuestRow {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_clean: string | null;
-  age_range: string | null;
-  solo_or_couple: string | null;
-  dietary_notes: string | null;
-  available_days: string[] | null;
-}
 
 interface ResumeData {
   id: number;
@@ -27,47 +18,34 @@ interface ResumeData {
   available_days: string[] | null;
 }
 
-async function fetchGuestByToken(token: string): Promise<ResumeData | null> {
-  try {
-    const guests = await query<GuestRow>(
-      `SELECT id, first_name, last_name, email, phone_clean, age_range, solo_or_couple, dietary_notes, available_days
-       FROM guests
-       WHERE resume_token = $1`,
-      [token]
-    );
+export default function JoinPage() {
+  const searchParams = useSearchParams();
+  const resumeToken = searchParams.get("resume");
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [loading, setLoading] = useState(!!resumeToken);
 
-    if (!guests || guests.length === 0) {
-      return null;
+  useEffect(() => {
+    if (resumeToken) {
+      fetch(`/api/guest?token=${resumeToken}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          setResumeData(data);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }
+  }, [resumeToken]);
 
-    const guest = guests[0];
-    return {
-      id: guest.id,
-      first_name: guest.first_name,
-      last_name: guest.last_name,
-      email: guest.email,
-      phone: guest.phone_clean,
-      age_range: guest.age_range,
-      solo_or_couple: guest.solo_or_couple,
-      dietary_notes: guest.dietary_notes,
-      available_days: guest.available_days,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export default async function JoinPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ resume?: string }>;
-}) {
-  const params = await searchParams;
-  const resumeToken = params.resume;
-
-  let resumeData: ResumeData | null = null;
-  if (resumeToken) {
-    resumeData = await fetchGuestByToken(resumeToken);
+  if (loading) {
+    return (
+      <main>
+        <Header />
+        <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+          <p className="text-warm-gray">Loading...</p>
+        </div>
+        <Footer />
+      </main>
+    );
   }
 
   return (
