@@ -1,0 +1,17 @@
+{
+  "name": "sequence-cron",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx tsx send-sequence-messages.ts",
+    "dry-run": "npx tsx send-sequence-messages.ts --dry-run"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

@@ -24,7 +24,23 @@ function sanitizePhone(value: string): string {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export function SignupSection() {
+interface ResumeData {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  age_range: string | null;
+  solo_or_couple: string | null;
+  dietary_notes: string | null;
+  available_days: string[] | null;
+}
+
+interface SignupSectionProps {
+  resumeData?: ResumeData | null;
+}
+
+export function SignupSection({ resumeData }: SignupSectionProps = {}) {
   const sectionRef = useRef<HTMLElement>(null);
   const [currentPage, setCurrentPage] = useState<1 | 2 | 3>(1);
   const [recordId, setRecordId] = useState<string | null>(null);
@@ -46,7 +62,6 @@ export function SignupSection() {
     availableDays: [...DAYS], // All checked by default
     // Page 3
     curiousAbout: "",
-    surprisingKnowledge: "",
     privacyAccepted: false,
   });
 
@@ -58,6 +73,26 @@ export function SignupSection() {
       campaign: params.get("utm_campaign") || "",
     });
   }, []);
+
+  // Pre-populate form from resumeData if provided
+  useEffect(() => {
+    if (resumeData) {
+      setRecordId(resumeData.id.toString());
+      setFormData((prev) => ({
+        ...prev,
+        firstName: resumeData.first_name || "",
+        lastName: resumeData.last_name || "",
+        email: resumeData.email || "",
+        phone: resumeData.phone ? formatPhoneNumber(resumeData.phone) : "",
+        phoneDigits: resumeData.phone || "",
+        ageRange: resumeData.age_range || "",
+        soloOrCouple: resumeData.solo_or_couple || "",
+        dietaryRestrictions: resumeData.dietary_notes || "",
+        availableDays: resumeData.available_days || [...DAYS],
+      }));
+      setCurrentPage(3);
+    }
+  }, [resumeData]);
 
   function updateField<K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -124,7 +159,6 @@ export function SignupSection() {
   function validatePage3(): boolean {
     const newErrors: Record<string, string> = {};
     if (!formData.curiousAbout.trim()) newErrors.curiousAbout = "This field is required";
-    if (!formData.surprisingKnowledge.trim()) newErrors.surprisingKnowledge = "This field is required";
     if (!formData.privacyAccepted) newErrors.privacyAccepted = "You must accept the Terms of Service and Privacy Policy";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -199,7 +233,6 @@ export function SignupSection() {
         body: JSON.stringify({
           recordId,
           curiousAbout: formData.curiousAbout,
-          surprisingKnowledge: formData.surprisingKnowledge,
           funnelStage: "New",
         }),
       });
@@ -237,6 +270,9 @@ export function SignupSection() {
           We read every response personally. If we think you&rsquo;d be a great fit for an upcoming dinner,
           we&rsquo;ll reach out soon.
         </p>
+        <p className="body-base mt-4 text-warm-gray">
+          We&rsquo;ll be in touch soon. Joe personally connects with every guest before their first dinner.
+        </p>
       </section>
     );
   }
@@ -248,7 +284,7 @@ export function SignupSection() {
       </h2>
       <p className="fade-in-up body-base mt-4 text-center text-warm-gray">
         {currentPage === 3
-          ? "Every Con-Vive dinner is different. These two questions help us match you with people you'll genuinely enjoy talking to."
+          ? "Every Con-Vive dinner is different. This helps us match you with people you'll genuinely enjoy talking to."
           : "Fill this out and I'll reach out within a day or two to welcome you and tell you about upcoming dinners."}
       </p>
 
@@ -436,24 +472,6 @@ export function SignupSection() {
                 className={inputClass}
               />
               {errors.curiousAbout && <p className={errorClass}>{errors.curiousAbout}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="surprisingKnowledge" className={labelClass}>
-                What do you know a surprising amount about? *
-              </label>
-              <textarea
-                id="surprisingKnowledge"
-                value={formData.surprisingKnowledge}
-                onChange={(e) => updateField("surprisingKnowledge", e.target.value)}
-                rows={4}
-                className={inputClass}
-              />
-              <p className="body-sm text-warm-gray mt-1.5">
-                Doesn&rsquo;t have to be professional - could be anything from vintage motorcycles to the history of
-                your neighborhood.
-              </p>
-              {errors.surprisingKnowledge && <p className={errorClass}>{errors.surprisingKnowledge}</p>}
             </div>
 
             <div className="flex items-start gap-3">

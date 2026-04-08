@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { nanoid } from "nanoid";
 
 const MAX_PER_RUN = 20;
 const DELAY_MS = 1000;
@@ -10,8 +11,8 @@ interface Guest {
   phone_clean: string;
 }
 
-function buildMessage(firstName: string): string {
-  return `Hey ${firstName}! This is Joe from Con-Vive. So glad you signed up — we've had an incredible response and I personally put together every table. I'll be in touch soon. — Joe`;
+function buildRecoveryMessage(firstName: string, token: string): string {
+  return `Hey ${firstName}! This is Joe from Con-Vive. Looks like you got interrupted — you're one step away from finishing your signup. Here's a link to jump right back in: con-vive.com/join?resume=${token} — Joe`;
 }
 
 async function sendSms(to: string, content: string): Promise<{ id: string }> {
@@ -55,23 +56,26 @@ async function main() {
   });
 
   try {
-    // Find guests who need a welcome text
+    // Find guests who dropped off at Page 2 (have phone but no curious_about)
+    // and haven't received a recovery text yet
     const { rows: guests } = await pool.query<Guest>(
       `SELECT id, first_name, phone_clean
        FROM guests
-       WHERE funnel_stage = 'New'
-         AND invite_text_sent_date IS NULL
+       WHERE funnel_stage = 'Partial'
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
-       ORDER BY created_at ASC`
+         AND curious_about IS NULL
+         AND recovery_text_sent = FALSE
+         AND updated_at < NOW() - INTERVAL '1 hour'
+       ORDER BY updated_at ASC`
     );
 
     if (guests.length === 0) {
-      console.log("No guests need a welcome text. Done.");
+      console.log("No guests need a recovery text. Done.");
       return;
     }
 
-    console.log(`Found ${guests.length} guest(s) needing welcome texts.`);
+    console.log(`Found ${guests.length} guest(s) needing recovery texts.`);
 
     if (guests.length > MAX_PER_RUN) {
       console.warn(`WARNING: ${guests.length} pending, capping at ${MAX_PER_RUN} this run.`);
@@ -84,7 +88,10 @@ async function main() {
     for (const guest of batch) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
-      const message = buildMessage(guest.first_name);
+
+      // Generate 8-character resume token
+      const token = nanoid(8);
+      const message = buildRecoveryMessage(guest.first_name, token);
 
       if (dryRun) {
         console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}): "${message}"`);
@@ -93,14 +100,22 @@ async function main() {
       }
 
       try {
-        const { id: quoMessageId } = await sendSms(to, message);
-
-        // Update guest: set invite_text_sent_date, sequence_step, and last_message_sent_at
+        // Update guest with resume token first
         await pool.query(
           `UPDATE guests
-           SET invite_text_sent_date = CURRENT_DATE,
-               sequence_step = 1,
-               last_message_sent_at = NOW(),
+           SET resume_token = $1,
+               updated_at = NOW()
+           WHERE id = $2`,
+          [token, guest.id]
+        );
+
+        // Send SMS
+        const { id: quoMessageId } = await sendSms(to, message);
+
+        // Mark recovery text as sent
+        await pool.query(
+          `UPDATE guests
+           SET recovery_text_sent = TRUE,
                updated_at = NOW()
            WHERE id = $1`,
           [guest.id]
@@ -108,12 +123,12 @@ async function main() {
 
         // Insert message record
         await pool.query(
-          `INSERT INTO messages (guest_id, direction, body, quo_message_id, sequence_step, message_type)
-           VALUES ($1, 'outbound', $2, $3, 1, 'sequence')`,
+          `INSERT INTO messages (guest_id, direction, body, quo_message_id, message_type)
+           VALUES ($1, 'outbound', $2, $3, 'recovery')`,
           [guest.id, message, quoMessageId]
         );
 
-        console.log(`Sent welcome text to ${guest.first_name} (***${phoneLast4})`);
+        console.log(`Sent recovery text to ${guest.first_name} (***${phoneLast4})`);
         sent++;
 
         // Rate limit delay (skip after last one)
