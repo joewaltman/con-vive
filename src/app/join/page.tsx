@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/landing/header";
 import { SignupSection } from "@/components/landing/signup-section";
 import { Footer } from "@/components/landing/footer";
@@ -18,13 +17,14 @@ interface ResumeData {
   available_days: string[] | null;
 }
 
-function JoinContent() {
-  const searchParams = useSearchParams();
-  const resumeToken = searchParams.get("resume");
+export default function JoinPage() {
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
-  const [loading, setLoading] = useState(!!resumeToken);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resumeToken = params.get("resume");
+
     if (resumeToken) {
       fetch(`/api/guest?token=${resumeToken}`)
         .then((res) => (res.ok ? res.json() : null))
@@ -33,33 +33,27 @@ function JoinContent() {
           setLoading(false);
         })
         .catch(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-  }, [resumeToken]);
+  }, []);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <p className="text-warm-gray">Loading...</p>
-      </div>
+      <main>
+        <Header />
+        <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+          <p className="text-warm-gray">Loading...</p>
+        </div>
+        <Footer />
+      </main>
     );
   }
 
-  return <SignupSection resumeData={resumeData} />;
-}
-
-export default function JoinPage() {
   return (
     <main>
       <Header />
-      <Suspense
-        fallback={
-          <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-            <p className="text-warm-gray">Loading...</p>
-          </div>
-        }
-      >
-        <JoinContent />
-      </Suspense>
+      <SignupSection resumeData={resumeData} />
       <Footer />
     </main>
   );
