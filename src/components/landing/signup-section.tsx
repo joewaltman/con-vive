@@ -267,10 +267,6 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
           Thanks, <span className="text-terracotta">{formData.firstName}</span>!
         </h2>
         <p className="body-lg mt-6 text-warm-gray">
-          We read every response personally. If we think you&rsquo;d be a great fit for an upcoming dinner,
-          we&rsquo;ll reach out soon.
-        </p>
-        <p className="body-base mt-4 text-warm-gray">
           We&rsquo;ll be in touch soon. Joe personally connects with every guest before their first dinner.
         </p>
       </section>
