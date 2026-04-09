@@ -174,21 +174,25 @@ async function writeToAirtable(
 
 export async function POST(request: Request) {
   try {
-    const body: QuoWebhookPayload = await request.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: any = await request.json();
 
-    // Debug logging to understand payload structure
-    console.log(`[Quo Webhook] Received payload keys: ${Object.keys(body).join(", ")}`);
-    console.log(`[Quo Webhook] body.object exists: ${!!body.object}`);
-    console.log(`[Quo Webhook] body.object?.data exists: ${!!body.object?.data}`);
-    console.log(`[Quo Webhook] body.object?.data?.object exists: ${!!body.object?.data?.object}`);
-    console.log(`[Quo Webhook] dialogue exists: ${!!body.object?.data?.object?.dialogue}`);
-    console.log(`[Quo Webhook] dialogue length: ${body.object?.data?.object?.dialogue?.length ?? "N/A"}`);
+    // OpenPhone sends two different formats:
+    // 1. Flat: { id, object: "event", type, data: { object: { dialogue } } }
+    // 2. Wrapped (shown in UI): { object: { id, type, data: { object: { dialogue } } } }
 
-    // Handle nested structure (new OpenPhone format)
-    const callData = body.object?.data?.object;
+    // Check for flat format first (what's actually sent)
+    const isFlat = typeof body.object === "string" && body.data?.object;
+    const callData = isFlat ? body.data?.object : body.object?.data?.object;
+
+    console.log(`[Quo Webhook] Payload format: ${isFlat ? "flat" : "wrapped"}`);
+    console.log(`[Quo Webhook] callData exists: ${!!callData}`);
+    console.log(`[Quo Webhook] dialogue exists: ${!!callData?.dialogue}`);
+    console.log(`[Quo Webhook] dialogue length: ${callData?.dialogue?.length ?? "N/A"}`);
+
     const dialogue = callData?.dialogue;
     const duration = callData?.duration ?? body.duration;
-    const createdAt = callData?.createdAt ?? body.object?.createdAt ?? body.createdAt;
+    const createdAt = callData?.createdAt ?? body.createdAt;
 
     // Build transcript from dialogue or use legacy transcript field
     let transcript: string | undefined;
