@@ -176,6 +176,14 @@ export async function POST(request: Request) {
   try {
     const body: QuoWebhookPayload = await request.json();
 
+    // Debug logging to understand payload structure
+    console.log(`[Quo Webhook] Received payload keys: ${Object.keys(body).join(", ")}`);
+    console.log(`[Quo Webhook] body.object exists: ${!!body.object}`);
+    console.log(`[Quo Webhook] body.object?.data exists: ${!!body.object?.data}`);
+    console.log(`[Quo Webhook] body.object?.data?.object exists: ${!!body.object?.data?.object}`);
+    console.log(`[Quo Webhook] dialogue exists: ${!!body.object?.data?.object?.dialogue}`);
+    console.log(`[Quo Webhook] dialogue length: ${body.object?.data?.object?.dialogue?.length ?? "N/A"}`);
+
     // Handle nested structure (new OpenPhone format)
     const callData = body.object?.data?.object;
     const dialogue = callData?.dialogue;
