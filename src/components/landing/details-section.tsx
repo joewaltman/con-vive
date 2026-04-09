@@ -12,12 +12,12 @@ const faqs = [
   {
     question: "What about dietary restrictions?",
     answer:
-      "We ask about dietary needs during the welcome call and make sure the menu works for everyone at the table. Just let us know.",
+      "We ask about dietary needs during signup and make sure the menu works for everyone at the table. Just let us know.",
   },
   {
     question: "Is it safe?",
     answer:
-      "We have a personal welcome call with every guest before their first dinner. We verify all guests and hosts. Your safety matters to us \u2014 this is someone\u2019s home, and we treat that seriously.",
+      "We personally review every guest before their first dinner. We verify all guests and hosts. Your safety matters to us \u2014 this is someone\u2019s home, and we treat that seriously.",
   },
   {
     question: "Where are the dinners?",
