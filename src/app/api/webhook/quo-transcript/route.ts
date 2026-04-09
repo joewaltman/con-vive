@@ -2,11 +2,33 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
 const JOE_PHONE = "+17602748830";
+const JOE_PHONE_CLEAN = "7602748830";
 const AIRTABLE_BASE_ID = "appgZoPBry2SBKP6Y";
 const AIRTABLE_TABLE_ID = "tbl9xJScvbQMrGUTh";
 
+interface DialogueItem {
+  start: number;
+  end: number;
+  content: string;
+  identifier: string;
+  userId?: string;
+}
+
 interface QuoWebhookPayload {
-  object?: string;
+  object?: {
+    type?: string;
+    createdAt?: string;
+    data?: {
+      object?: {
+        callId?: string;
+        dialogue?: DialogueItem[];
+        duration?: number;
+        status?: string;
+        createdAt?: string;
+      };
+    };
+  };
+  // Legacy flat structure (kept for backwards compatibility)
   callId?: string;
   transcript?: string;
   from?: string;
@@ -20,6 +42,25 @@ function extractPhoneClean(phone: string): string {
   // Strip all non-digits, then take last 10 digits
   const digits = phone.replace(/\D/g, "");
   return digits.slice(-10);
+}
+
+function dialogueToTranscript(dialogue: DialogueItem[]): string {
+  return dialogue
+    .map((item) => {
+      const speaker = item.identifier.includes(JOE_PHONE_CLEAN) ? "Joe" : "Guest";
+      return `${speaker}: ${item.content}`;
+    })
+    .join("\n");
+}
+
+function extractGuestPhone(dialogue: DialogueItem[]): string | null {
+  for (const item of dialogue) {
+    const phoneClean = extractPhoneClean(item.identifier);
+    if (phoneClean !== JOE_PHONE_CLEAN) {
+      return phoneClean;
+    }
+  }
+  return null;
 }
 
 async function summarizeWithClaude(transcript: string, guestName: string): Promise<string> {
@@ -135,33 +176,52 @@ export async function POST(request: Request) {
   try {
     const body: QuoWebhookPayload = await request.json();
 
+    // Handle nested structure (new OpenPhone format)
+    const callData = body.object?.data?.object;
+    const dialogue = callData?.dialogue;
+    const duration = callData?.duration ?? body.duration;
+    const createdAt = callData?.createdAt ?? body.object?.createdAt ?? body.createdAt;
+
+    // Build transcript from dialogue or use legacy transcript field
+    let transcript: string | undefined;
+    let phoneClean: string | undefined;
+
+    if (dialogue && dialogue.length > 0) {
+      transcript = dialogueToTranscript(dialogue);
+      phoneClean = extractGuestPhone(dialogue) || undefined;
+      console.log(`[Quo Webhook] Parsed dialogue with ${dialogue.length} items, guest phone: ${phoneClean}`);
+    } else if (body.transcript) {
+      transcript = body.transcript;
+      // Extract phone from legacy fields
+      const fromPhone = body.from || "";
+      const toPhone = body.to || "";
+      let guestPhone: string;
+      if (fromPhone === JOE_PHONE || fromPhone.endsWith("7602748830")) {
+        guestPhone = toPhone;
+      } else if (toPhone === JOE_PHONE || toPhone.endsWith("7602748830")) {
+        guestPhone = fromPhone;
+      } else {
+        guestPhone = body.direction === "outbound" ? toPhone : fromPhone;
+      }
+      phoneClean = extractPhoneClean(guestPhone);
+    }
+
     // 1. Validate the request
-    if (!body.transcript) {
+    if (!transcript) {
       console.log("[Quo Webhook] No transcript in payload, ignoring");
       return NextResponse.json({ success: true, skipped: true, reason: "no_transcript" });
     }
 
-    if (!body.duration || body.duration < 60) {
-      console.log(`[Quo Webhook] Duration ${body.duration}s < 60s, ignoring (voicemail/dropped call)`);
+    if (!duration || duration < 60) {
+      console.log(`[Quo Webhook] Duration ${duration}s < 60s, ignoring (voicemail/dropped call)`);
       return NextResponse.json({ success: true, skipped: true, reason: "short_duration" });
     }
 
-    // 2. Extract guest phone number
-    const fromPhone = body.from || "";
-    const toPhone = body.to || "";
-
-    let guestPhone: string;
-    if (fromPhone === JOE_PHONE || fromPhone.endsWith("7602748830")) {
-      guestPhone = toPhone;
-    } else if (toPhone === JOE_PHONE || toPhone.endsWith("7602748830")) {
-      guestPhone = fromPhone;
-    } else {
-      // Neither is Joe's number - assume it's the "from" for inbound or "to" for outbound
-      guestPhone = body.direction === "outbound" ? toPhone : fromPhone;
+    if (!phoneClean) {
+      console.log("[Quo Webhook] Could not extract guest phone number");
+      return NextResponse.json({ success: true, skipped: true, reason: "no_guest_phone" });
     }
-
-    const phoneClean = extractPhoneClean(guestPhone);
-    console.log(`[Quo Webhook] Processing call - guest phone: ${phoneClean}, duration: ${body.duration}s`);
+    console.log(`[Quo Webhook] Processing call - guest phone: ${phoneClean}, duration: ${duration}s`);
 
     // 3. Look up guest in Postgres
     const guestResult = await query<{ id: number; first_name: string; last_name: string }>(
@@ -187,7 +247,7 @@ export async function POST(request: Request) {
     // 4. Send to Claude for summarization
     let summarizedTranscript: string;
     try {
-      summarizedTranscript = await summarizeWithClaude(body.transcript, guestName);
+      summarizedTranscript = await summarizeWithClaude(transcript, guestName);
       console.log(`[Quo Webhook] Claude summary generated: ${summarizedTranscript.length} chars`);
     } catch (error) {
       console.error("[Quo Webhook] Claude API failed:", error);
@@ -196,7 +256,7 @@ export async function POST(request: Request) {
     }
 
     // 5. Write to Postgres
-    const callDate = body.createdAt ? body.createdAt.split("T")[0] : new Date().toISOString().split("T")[0];
+    const callDate = createdAt ? createdAt.split("T")[0] : new Date().toISOString().split("T")[0];
 
     // 5a. Upsert transcript
     const existingTranscript = await query<{ id: number }>(
@@ -207,13 +267,13 @@ export async function POST(request: Request) {
     if (existingTranscript && existingTranscript.length > 0) {
       await query(
         "UPDATE transcripts SET full_transcript = $1, summarized_transcript = $2, updated_at = NOW() WHERE guest_id = $3",
-        [body.transcript, summarizedTranscript, guest.id]
+        [transcript, summarizedTranscript, guest.id]
       );
       console.log(`[Quo Webhook] Postgres: Updated transcript for guest ${guest.id}`);
     } else {
       await query(
         "INSERT INTO transcripts (guest_id, full_transcript, summarized_transcript) VALUES ($1, $2, $3)",
-        [guest.id, body.transcript, summarizedTranscript]
+        [guest.id, transcript, summarizedTranscript]
       );
       console.log(`[Quo Webhook] Postgres: Inserted transcript for guest ${guest.id}`);
     }
@@ -231,7 +291,7 @@ export async function POST(request: Request) {
     console.log(`[Quo Webhook] Postgres: Updated guest ${guest.id} - call_complete=true, call_date=${callDate}`);
 
     // 6. Write to Airtable (dual-write, non-blocking)
-    writeToAirtable(phoneClean, body.transcript, summarizedTranscript, callDate).catch((err) =>
+    writeToAirtable(phoneClean, transcript, summarizedTranscript, callDate).catch((err) =>
       console.error("[Quo Webhook] Airtable background write failed:", err)
     );
 
