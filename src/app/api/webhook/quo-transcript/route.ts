@@ -3,8 +3,6 @@ import { query } from "@/lib/db";
 
 const JOE_PHONE = "+17602748830";
 const JOE_PHONE_CLEAN = "7602748830";
-const AIRTABLE_BASE_ID = "appgZoPBry2SBKP6Y";
-const AIRTABLE_TABLE_ID = "tbl9xJScvbQMrGUTh";
 
 interface DialogueItem {
   start: number;
@@ -103,73 +101,6 @@ ${transcript}`,
 
   const data = await response.json();
   return data.content?.[0]?.text || "";
-}
-
-async function writeToAirtable(
-  phoneClean: string,
-  fullTranscript: string,
-  summarizedTranscript: string,
-  callDate: string
-): Promise<void> {
-  const token = process.env.AIRTABLE_API_TOKEN;
-  if (!token) {
-    console.log("[Quo Webhook] Skipping Airtable write - no token configured");
-    return;
-  }
-
-  try {
-    // Search for the record by Phone Clean
-    const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}?filterByFormula={Phone Clean}='${phoneClean}'`;
-    const searchResponse = await fetch(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!searchResponse.ok) {
-      const error = await searchResponse.text();
-      console.error("[Quo Webhook] Airtable search error:", error);
-      return;
-    }
-
-    const searchData = await searchResponse.json();
-    if (!searchData.records || searchData.records.length === 0) {
-      console.log(`[Quo Webhook] Airtable: No record found for phone ${phoneClean}`);
-      return;
-    }
-
-    const recordId = searchData.records[0].id;
-
-    // Update the record
-    const updateResponse = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}/${recordId}`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fields: {
-            "Full Transcript": fullTranscript,
-            "Summarized Transcript": summarizedTranscript,
-            "Call Date": callDate,
-          },
-        }),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      const error = await updateResponse.text();
-      console.error("[Quo Webhook] Airtable update error:", error);
-      return;
-    }
-
-    console.log(`[Quo Webhook] Airtable: Updated record ${recordId}`);
-  } catch (error) {
-    console.error("[Quo Webhook] Airtable write failed:", error);
-    // Don't throw - Postgres is the source of truth
-  }
 }
 
 export async function POST(request: Request) {
@@ -302,12 +233,7 @@ export async function POST(request: Request) {
     );
     console.log(`[Quo Webhook] Postgres: Updated guest ${guest.id} - call_complete=true, call_date=${callDate}`);
 
-    // 6. Write to Airtable (dual-write, non-blocking)
-    writeToAirtable(phoneClean, transcript, summarizedTranscript, callDate).catch((err) =>
-      console.error("[Quo Webhook] Airtable background write failed:", err)
-    );
-
-    // 7. Return success
+    // 6. Return success
     return NextResponse.json({
       success: true,
       guest_id: guest.id,
