@@ -168,11 +168,12 @@ export async function syncContacts(
     try {
       const result = await createQuoContact(guest);
 
-      if (result.id) {
-        // Update guest with Quo contact ID
+      // Update guest with Quo contact ID (or mark as synced if already exists)
+      const contactId = result.id || (result.alreadyExists ? "exists_in_quo" : null);
+      if (contactId) {
         await pool.query(
           `UPDATE guests SET quo_contact_id = $1, updated_at = NOW() WHERE id = $2`,
-          [result.id, guest.id]
+          [contactId, guest.id]
         );
       }
 
