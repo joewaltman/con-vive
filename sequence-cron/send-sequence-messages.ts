@@ -12,6 +12,15 @@ interface Guest {
   curious_about: string | null;
 }
 
+interface SchedulableGuest {
+  id: number;
+  first_name: string;
+}
+
+interface SendableGuest extends Guest {
+  next_sequence_scheduled_at: Date;
+}
+
 function buildStep2Message(firstName: string): string {
   return `Hey ${firstName}! Do you have an Instagram, LinkedIn, or anywhere I can take a quick look? Sometimes it means we can skip a call entirely. — Joe`;
 }
@@ -55,34 +64,92 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Check if current time is in the 9:00-9:14 AM PST window
+ * Ensure the next_sequence_scheduled_at column exists
  */
-function isIn9amPstWindow(): boolean {
-  const now = new Date();
-  // Convert to PST (UTC-8, or UTC-7 during DST)
-  const pstOffset = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
-  const pstDate = new Date(pstOffset);
-  const hours = pstDate.getHours();
-  const minutes = pstDate.getMinutes();
+async function ensureMigration(pool: Pool): Promise<void> {
+  const { rows } = await pool.query(`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'guests' AND column_name = 'next_sequence_scheduled_at'
+  `);
 
-  return hours === 9 && minutes >= 0 && minutes <= 14;
+  if (rows.length === 0) {
+    console.log("Adding next_sequence_scheduled_at column to guests table...");
+    await pool.query(`ALTER TABLE guests ADD COLUMN next_sequence_scheduled_at TIMESTAMPTZ`);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_guests_next_scheduled
+      ON guests(next_sequence_scheduled_at)
+      WHERE next_sequence_scheduled_at IS NOT NULL
+    `);
+    console.log("Migration complete.");
+  }
+}
+
+/**
+ * Generate a random send time between 9:00-11:00 AM PT
+ * If it's before 11am PT today, schedule for today; otherwise tomorrow
+ */
+function generateRandomSendTime(): Date {
+  const now = new Date();
+
+  // Get current hour in PT
+  const ptFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour: "numeric",
+    hour12: false,
+  });
+  const currentHourPT = parseInt(ptFormatter.format(now), 10);
+
+  // Get current date parts in PT
+  const ptDateFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const ptDateParts = ptDateFormatter.formatToParts(now);
+  let year = parseInt(ptDateParts.find((p) => p.type === "year")!.value, 10);
+  let month = parseInt(ptDateParts.find((p) => p.type === "month")!.value, 10);
+  let day = parseInt(ptDateParts.find((p) => p.type === "day")!.value, 10);
+
+  // If it's 11am PT or later, schedule for tomorrow
+  if (currentHourPT >= 11) {
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowParts = ptDateFormatter.formatToParts(tomorrow);
+    year = parseInt(tomorrowParts.find((p) => p.type === "year")!.value, 10);
+    month = parseInt(tomorrowParts.find((p) => p.type === "month")!.value, 10);
+    day = parseInt(tomorrowParts.find((p) => p.type === "day")!.value, 10);
+  }
+
+  // Create 9:00 AM PT on target day
+  // Use Intl to get the correct UTC offset for that date (handles DST)
+  const targetDateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T09:00:00`;
+
+  // Create a date object and adjust for PT timezone
+  // First, get the offset for PT on this date
+  const tempDate = new Date(`${targetDateStr}Z`);
+  const ptOffsetFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    timeZoneName: "shortOffset",
+  });
+  const offsetMatch = ptOffsetFormatter.format(tempDate).match(/GMT([+-]\d+)/);
+  const ptOffsetHours = offsetMatch ? parseInt(offsetMatch[1], 10) : -8;
+
+  // Create 9:00 AM PT in UTC
+  const base9amUTC = new Date(Date.UTC(year, month - 1, day, 9 - ptOffsetHours, 0, 0));
+
+  // Add 0-119 random minutes (spreads across 9:00-10:59 AM PT)
+  const randomMinutes = Math.floor(Math.random() * 120);
+  return new Date(base9amUTC.getTime() + randomMinutes * 60 * 1000);
 }
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const forceRun = process.argv.includes("--force"); // Skip time window check
+  const forceRun = process.argv.includes("--force"); // For testing/debugging
 
   if (dryRun) console.log("[DRY RUN] No texts will be sent.\n");
+  if (forceRun) console.log("[FORCE] Running in force mode.\n");
 
-  // Check if we're in the 9am window (unless forcing)
-  const in9amWindow = isIn9amPstWindow();
   console.log(`Current time: ${new Date().toISOString()}`);
-  console.log(`In 9am PST window: ${in9amWindow}`);
-
-  if (!in9amWindow && !forceRun) {
-    console.log("Not in 9:00-9:14 AM PST window. Exiting.");
-    return;
-  }
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -90,19 +157,25 @@ async function main() {
   });
 
   try {
+    // Ensure migration is applied
+    await ensureMigration(pool);
+
+    let totalScheduled = 0;
     let totalSent = 0;
     let totalFailed = 0;
 
     // STEP 2: Social link ask
-    // Guests at step 1, not paused, 30+ min since last message
     console.log("\n--- Step 2: Social link ask ---");
-    const { rows: step2Guests } = await pool.query<Guest>(
-      `SELECT id, first_name, phone_clean, sequence_step, curious_about
+
+    // Phase A: Schedule eligible guests
+    const { rows: step2ToSchedule } = await pool.query<SchedulableGuest>(
+      `SELECT id, first_name
        FROM guests
        WHERE sequence_step = 1
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
          AND last_message_sent_at < NOW() - INTERVAL '30 minutes'
+         AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
        ORDER BY last_message_sent_at ASC
@@ -110,9 +183,44 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step2Guests.length} guest(s) ready for Step 2`);
+    console.log(`Found ${step2ToSchedule.length} guest(s) to schedule for Step 2`);
 
-    for (const guest of step2Guests) {
+    for (const guest of step2ToSchedule) {
+      const scheduledTime = generateRandomSendTime();
+      if (dryRun) {
+        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 2 at ${scheduledTime.toISOString()}`);
+      } else {
+        await pool.query(
+          `UPDATE guests
+           SET next_sequence_scheduled_at = $2,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [guest.id, scheduledTime]
+        );
+        console.log(`Scheduled ${guest.first_name} for Step 2 at ${scheduledTime.toISOString()}`);
+      }
+      totalScheduled++;
+    }
+
+    // Phase B: Send scheduled texts
+    const { rows: step2ToSend } = await pool.query<SendableGuest>(
+      `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
+       FROM guests
+       WHERE sequence_step = 1
+         AND sequence_paused = FALSE
+         AND sequence_completed = FALSE
+         AND next_sequence_scheduled_at IS NOT NULL
+         AND next_sequence_scheduled_at <= NOW()
+         AND phone_clean IS NOT NULL
+         AND phone_clean != ''
+       ORDER BY next_sequence_scheduled_at ASC
+       LIMIT $1`,
+      [MAX_PER_RUN]
+    );
+
+    console.log(`Found ${step2ToSend.length} guest(s) ready to send Step 2`);
+
+    for (const guest of step2ToSend) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
       const message = buildStep2Message(guest.first_name);
@@ -130,6 +238,7 @@ async function main() {
           `UPDATE guests
            SET sequence_step = 2,
                last_message_sent_at = NOW(),
+               next_sequence_scheduled_at = NULL,
                updated_at = NOW()
            WHERE id = $1`,
           [guest.id]
@@ -151,15 +260,17 @@ async function main() {
     }
 
     // STEP 3: Curiosity question
-    // Guests at step 2, not paused, 2+ days since last message
     console.log("\n--- Step 3: Curiosity question ---");
-    const { rows: step3Guests } = await pool.query<Guest>(
-      `SELECT id, first_name, phone_clean, sequence_step, curious_about
+
+    // Phase A: Schedule eligible guests
+    const { rows: step3ToSchedule } = await pool.query<SchedulableGuest>(
+      `SELECT id, first_name
        FROM guests
        WHERE sequence_step = 2
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
          AND last_message_sent_at < NOW() - INTERVAL '2 days'
+         AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
        ORDER BY last_message_sent_at ASC
@@ -167,9 +278,44 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step3Guests.length} guest(s) ready for Step 3`);
+    console.log(`Found ${step3ToSchedule.length} guest(s) to schedule for Step 3`);
 
-    for (const guest of step3Guests) {
+    for (const guest of step3ToSchedule) {
+      const scheduledTime = generateRandomSendTime();
+      if (dryRun) {
+        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 3 at ${scheduledTime.toISOString()}`);
+      } else {
+        await pool.query(
+          `UPDATE guests
+           SET next_sequence_scheduled_at = $2,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [guest.id, scheduledTime]
+        );
+        console.log(`Scheduled ${guest.first_name} for Step 3 at ${scheduledTime.toISOString()}`);
+      }
+      totalScheduled++;
+    }
+
+    // Phase B: Send scheduled texts
+    const { rows: step3ToSend } = await pool.query<SendableGuest>(
+      `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
+       FROM guests
+       WHERE sequence_step = 2
+         AND sequence_paused = FALSE
+         AND sequence_completed = FALSE
+         AND next_sequence_scheduled_at IS NOT NULL
+         AND next_sequence_scheduled_at <= NOW()
+         AND phone_clean IS NOT NULL
+         AND phone_clean != ''
+       ORDER BY next_sequence_scheduled_at ASC
+       LIMIT $1`,
+      [MAX_PER_RUN]
+    );
+
+    console.log(`Found ${step3ToSend.length} guest(s) ready to send Step 3`);
+
+    for (const guest of step3ToSend) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
       const message = buildStep3Message();
@@ -187,6 +333,7 @@ async function main() {
           `UPDATE guests
            SET sequence_step = 3,
                last_message_sent_at = NOW(),
+               next_sequence_scheduled_at = NULL,
                updated_at = NOW()
            WHERE id = $1`,
           [guest.id]
@@ -208,15 +355,17 @@ async function main() {
     }
 
     // STEP 4: Soft nudge
-    // Guests at step 3, not paused, 5+ days since last message
     console.log("\n--- Step 4: Soft nudge ---");
-    const { rows: step4Guests } = await pool.query<Guest>(
-      `SELECT id, first_name, phone_clean, sequence_step, curious_about
+
+    // Phase A: Schedule eligible guests
+    const { rows: step4ToSchedule } = await pool.query<SchedulableGuest>(
+      `SELECT id, first_name
        FROM guests
        WHERE sequence_step = 3
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
          AND last_message_sent_at < NOW() - INTERVAL '5 days'
+         AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
        ORDER BY last_message_sent_at ASC
@@ -224,9 +373,44 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step4Guests.length} guest(s) ready for Step 4`);
+    console.log(`Found ${step4ToSchedule.length} guest(s) to schedule for Step 4`);
 
-    for (const guest of step4Guests) {
+    for (const guest of step4ToSchedule) {
+      const scheduledTime = generateRandomSendTime();
+      if (dryRun) {
+        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 4 at ${scheduledTime.toISOString()}`);
+      } else {
+        await pool.query(
+          `UPDATE guests
+           SET next_sequence_scheduled_at = $2,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [guest.id, scheduledTime]
+        );
+        console.log(`Scheduled ${guest.first_name} for Step 4 at ${scheduledTime.toISOString()}`);
+      }
+      totalScheduled++;
+    }
+
+    // Phase B: Send scheduled texts
+    const { rows: step4ToSend } = await pool.query<SendableGuest>(
+      `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
+       FROM guests
+       WHERE sequence_step = 3
+         AND sequence_paused = FALSE
+         AND sequence_completed = FALSE
+         AND next_sequence_scheduled_at IS NOT NULL
+         AND next_sequence_scheduled_at <= NOW()
+         AND phone_clean IS NOT NULL
+         AND phone_clean != ''
+       ORDER BY next_sequence_scheduled_at ASC
+       LIMIT $1`,
+      [MAX_PER_RUN]
+    );
+
+    console.log(`Found ${step4ToSend.length} guest(s) ready to send Step 4`);
+
+    for (const guest of step4ToSend) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
       const message = buildStep4Message(guest.first_name);
@@ -245,6 +429,7 @@ async function main() {
            SET sequence_step = 4,
                sequence_completed = TRUE,
                last_message_sent_at = NOW(),
+               next_sequence_scheduled_at = NULL,
                updated_at = NOW()
            WHERE id = $1`,
           [guest.id]
@@ -307,7 +492,7 @@ async function main() {
       console.log(`Flagged ${guest.first_name} for manual review (has detailed curious_about)`);
     }
 
-    console.log(`\nDone. Sent: ${totalSent}, Failed: ${totalFailed}`);
+    console.log(`\nDone. Scheduled: ${totalScheduled}, Sent: ${totalSent}, Failed: ${totalFailed}`);
   } finally {
     await pool.end();
   }
