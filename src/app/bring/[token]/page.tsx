@@ -27,11 +27,13 @@ interface BringData {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
+  // Parse ISO date string and format in UTC to avoid timezone shifts
+  const date = new Date(dateStr);
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
