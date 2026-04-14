@@ -20,13 +20,17 @@ interface Dinner {
   menu: string | null;
 }
 
-interface BringItem {
+interface BringItemRow {
   id: number;
   category: string;
   description: string | null;
   slots: number;
-  claimed_by: number | null;
-  claimer_first_name: string | null;
+}
+
+interface ClaimRow {
+  bring_item_id: number;
+  guest_id: number;
+  first_name: string;
 }
 
 export async function GET(
@@ -78,21 +82,44 @@ export async function GET(
 
   const dinner = dinners[0];
 
-  // Get all bring items for this dinner with claimer info
-  const items = await query<BringItem>(
-    `SELECT
-      bi.id,
-      bi.category,
-      bi.description,
-      bi.slots,
-      bi.claimed_by,
-      g.first_name as claimer_first_name
-     FROM bring_items bi
-     LEFT JOIN guests g ON bi.claimed_by = g.id
-     WHERE bi.dinner_id = $1
-     ORDER BY bi.category, bi.id`,
+  // Get all bring items for this dinner
+  const itemRows = await query<BringItemRow>(
+    `SELECT id, category, description, slots
+     FROM bring_items
+     WHERE dinner_id = $1
+     ORDER BY category, id`,
     [invitation.dinner_id]
   );
+
+  // Get all claims for these items with guest names
+  const claimRows = await query<ClaimRow>(
+    `SELECT bic.bring_item_id, bic.guest_id, g.first_name
+     FROM bring_item_claims bic
+     JOIN guests g ON bic.guest_id = g.id
+     JOIN bring_items bi ON bic.bring_item_id = bi.id
+     WHERE bi.dinner_id = $1
+     ORDER BY bic.claimed_at`,
+    [invitation.dinner_id]
+  );
+
+  // Build items with claims
+  const items = (itemRows || []).map((item) => {
+    const claims = (claimRows || [])
+      .filter((c) => c.bring_item_id === item.id)
+      .map((c) => ({
+        guest_id: c.guest_id,
+        first_name: c.first_name,
+      }));
+
+    return {
+      id: item.id,
+      category: item.category,
+      description: item.description,
+      slots: item.slots,
+      claims,
+      available: item.slots - claims.length,
+    };
+  });
 
   return NextResponse.json({
     guest: {
@@ -106,6 +133,6 @@ export async function GET(
       host: dinner.host,
       menu: dinner.menu,
     },
-    items: items || [],
+    items,
   });
 }

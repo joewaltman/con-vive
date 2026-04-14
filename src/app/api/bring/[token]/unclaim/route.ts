@@ -49,18 +49,17 @@ export async function POST(
 
   const invitation = invitations[0];
 
-  // Only unclaim if the item is claimed by this guest
+  // Delete the claim for this guest on this item
   const unclaimResult = await query<{ id: number }>(
-    `UPDATE bring_items
-     SET claimed_by = NULL, claimed_at = NULL
-     WHERE id = $1 AND claimed_by = $2
+    `DELETE FROM bring_item_claims
+     WHERE bring_item_id = $1 AND guest_id = $2
      RETURNING id`,
     [item_id, invitation.guest_id]
   );
 
   if (!unclaimResult || unclaimResult.length === 0) {
     return NextResponse.json(
-      { error: "You can only unclaim items you have claimed" },
+      { error: "You haven't claimed this item" },
       { status: 400 }
     );
   }

@@ -10,7 +10,7 @@ interface Invitation {
 interface BringItem {
   id: number;
   dinner_id: number;
-  claimed_by: number | null;
+  slots: number;
 }
 
 interface ClaimRequest {
@@ -57,7 +57,7 @@ export async function POST(
 
   // Check if item exists and belongs to this dinner
   const items = await query<BringItem>(
-    `SELECT id, dinner_id, claimed_by FROM bring_items WHERE id = $1`,
+    `SELECT id, dinner_id, slots FROM bring_items WHERE id = $1`,
     [item_id]
   );
 
@@ -74,31 +74,38 @@ export async function POST(
     );
   }
 
-  // Check if guest has already claimed another item for this dinner
-  const existingClaims = await query<{ id: number }>(
-    `SELECT id FROM bring_items WHERE dinner_id = $1 AND claimed_by = $2`,
-    [invitation.dinner_id, invitation.guest_id]
+  // Check if guest has already claimed this specific item
+  const existingClaim = await query<{ id: number }>(
+    `SELECT id FROM bring_item_claims WHERE bring_item_id = $1 AND guest_id = $2`,
+    [item_id, invitation.guest_id]
   );
 
-  if (existingClaims && existingClaims.length > 0) {
+  if (existingClaim && existingClaim.length > 0) {
     return NextResponse.json(
-      { error: "You have already claimed an item for this dinner" },
+      { error: "You have already claimed this item" },
       { status: 400 }
     );
   }
 
   // Attempt atomic claim with race condition protection
+  // This INSERT will fail if:
+  // 1. The unique constraint (bring_item_id, guest_id) is violated
+  // 2. The subquery returns >= slots (all slots taken)
   const claimResult = await query<{ id: number }>(
-    `UPDATE bring_items
-     SET claimed_by = $1, claimed_at = NOW()
-     WHERE id = $2 AND claimed_by IS NULL
+    `INSERT INTO bring_item_claims (bring_item_id, guest_id)
+     SELECT $1, $2
+     WHERE (
+       SELECT COUNT(*) FROM bring_item_claims WHERE bring_item_id = $1
+     ) < (
+       SELECT slots FROM bring_items WHERE id = $1
+     )
      RETURNING id`,
-    [invitation.guest_id, item_id]
+    [item_id, invitation.guest_id]
   );
 
   if (!claimResult || claimResult.length === 0) {
     return NextResponse.json(
-      { error: "Item has already been claimed" },
+      { error: "All slots for this item have been claimed" },
       { status: 409 }
     );
   }

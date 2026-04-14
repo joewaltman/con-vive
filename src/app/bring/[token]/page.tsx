@@ -2,13 +2,18 @@
 
 import { useEffect, useState, use } from "react";
 
+interface Claim {
+  guest_id: number;
+  first_name: string;
+}
+
 interface BringItem {
   id: number;
   category: string;
   description: string | null;
   slots: number;
-  claimed_by: number | null;
-  claimer_first_name: string | null;
+  claims: Claim[];
+  available: number;
 }
 
 interface BringData {
@@ -177,23 +182,30 @@ export default function BringPage({
   }
 
   const { guest, dinner, items } = data;
-  const myClaimedItem = items.find((item) => item.claimed_by === guest.id);
-  const availableItems = items.filter((item) => item.claimed_by === null);
-  const otherClaimedItems = items.filter(
-    (item) => item.claimed_by !== null && item.claimed_by !== guest.id
+
+  // Items the current user has claimed
+  const myClaimedItems = items.filter((item) =>
+    item.claims.some((c) => c.guest_id === guest.id)
   );
 
-  // Group items by category
-  const categories = [...new Set(items.map((item) => item.category))];
+  // Items with available slots that user hasn't claimed
+  const availableItems = items.filter(
+    (item) =>
+      item.available > 0 && !item.claims.some((c) => c.guest_id === guest.id)
+  );
+
+  // All items are fully claimed
+  const allFullyClaimed =
+    items.length > 0 &&
+    items.every((item) => item.available === 0) &&
+    myClaimedItems.length === 0;
 
   return (
     <div className="flex min-h-screen flex-col px-6 py-12">
       <div className="mx-auto w-full max-w-lg">
         {/* Header */}
         <div className="text-center">
-          <h1 className="heading-1 text-charcoal">
-            Hey {guest.first_name}!
-          </h1>
+          <h1 className="heading-1 text-charcoal">Hey {guest.first_name}!</h1>
           <p className="body-lg mt-4 text-warm-gray">
             {dinner.host}&rsquo;s dinner on {formatDate(dinner.date)}
           </p>
@@ -209,49 +221,138 @@ export default function BringPage({
           </div>
         )}
 
-        {/* Your claimed item */}
-        {myClaimedItem && (
-          <div className="mt-8 rounded-xl border-2 border-terracotta bg-white p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="body-sm font-medium text-terracotta">
-                  You&rsquo;re bringing
-                </p>
-                <p className="heading-2 mt-1 text-charcoal">
-                  {myClaimedItem.category}
-                </p>
-                {myClaimedItem.description && (
-                  <p className="body-sm mt-1 text-warm-gray">
-                    {myClaimedItem.description}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => handleUnclaim(myClaimedItem.id)}
-                disabled={claiming !== null}
-                className="body-sm text-terracotta underline hover:opacity-80 disabled:opacity-50"
-              >
-                Change
-              </button>
-            </div>
+        {/* Your claimed items */}
+        {myClaimedItems.length > 0 && (
+          <div className="mt-8 space-y-3">
+            {myClaimedItems.map((item) => {
+              const otherClaimers = item.claims.filter(
+                (c) => c.guest_id !== guest.id
+              );
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border-2 border-terracotta bg-white p-6"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="body-sm font-medium text-terracotta">
+                        You&rsquo;re bringing
+                      </p>
+                      <p className="heading-2 mt-1 text-charcoal">
+                        {item.category}
+                      </p>
+                      {item.description && (
+                        <p className="body-sm mt-1 text-warm-gray">
+                          {item.description}
+                        </p>
+                      )}
+                      {otherClaimers.length > 0 && (
+                        <p className="body-sm mt-2 text-warm-gray">
+                          Also bringing:{" "}
+                          {otherClaimers.map((c) => c.first_name).join(", ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleUnclaim(item.id)}
+                      disabled={claiming !== null}
+                      className="body-sm text-terracotta underline hover:opacity-80 disabled:opacity-50"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Available items */}
-        {!myClaimedItem && availableItems.length > 0 && (
+        {availableItems.length > 0 && (
           <div className="mt-8">
             <h2 className="heading-2 text-charcoal">
-              What would you like to bring?
+              {myClaimedItems.length > 0
+                ? "Bring something else?"
+                : "What would you like to bring?"}
             </h2>
             <div className="mt-4 space-y-3">
-              {availableItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-xl border border-border bg-white p-4"
-                >
-                  <div>
-                    <p className="body-base font-medium text-charcoal">
-                      {item.category}
+              {availableItems.map((item) => {
+                const hasOtherClaimers = item.claims.length > 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-border bg-white p-4"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="body-base font-medium text-charcoal">
+                            {item.category}
+                          </p>
+                          {item.slots > 1 && (
+                            <span className="body-sm text-warm-gray">
+                              ({item.available} of {item.slots} available)
+                            </span>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="body-sm text-warm-gray">
+                            {item.description}
+                          </p>
+                        )}
+                        {hasOtherClaimers && (
+                          <p className="body-sm mt-1 text-warm-gray">
+                            {item.claims.map((c) => c.first_name).join(", ")}{" "}
+                            {item.claims.length === 1 ? "is" : "are"} bringing
+                            this
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleClaim(item.id)}
+                        disabled={claiming !== null}
+                        className="ml-3 shrink-0 rounded-full bg-terracotta px-4 py-2 text-sm font-medium text-cream transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        {claiming === item.id
+                          ? "..."
+                          : hasOtherClaimers
+                            ? "I'll bring one too"
+                            : "I'll bring this"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Fully claimed items (no slots available, user hasn't claimed) */}
+        {items.filter(
+          (item) =>
+            item.available === 0 &&
+            !item.claims.some((c) => c.guest_id === guest.id)
+        ).length > 0 && (
+          <div className="mt-8">
+            <h2 className="heading-2 text-charcoal">Already covered</h2>
+            <div className="mt-4 space-y-3">
+              {items
+                .filter(
+                  (item) =>
+                    item.available === 0 &&
+                    !item.claims.some((c) => c.guest_id === guest.id)
+                )
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-border bg-cream/50 p-4"
+                  >
+                    <p className="body-base text-charcoal">
+                      <span className="font-medium">
+                        {item.claims.map((c) => c.first_name).join(" & ")}
+                      </span>{" "}
+                      {item.claims.length === 1 ? "is" : "are"} bringing{" "}
+                      {item.category.toLowerCase()}
                     </p>
                     {item.description && (
                       <p className="body-sm text-warm-gray">
@@ -259,21 +360,13 @@ export default function BringPage({
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleClaim(item.id)}
-                    disabled={claiming !== null}
-                    className="rounded-full bg-terracotta px-4 py-2 text-sm font-medium text-cream transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    {claiming === item.id ? "..." : "I'll bring this"}
-                  </button>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
 
         {/* All items claimed message */}
-        {!myClaimedItem && availableItems.length === 0 && items.length > 0 && (
+        {allFullyClaimed && (
           <div className="mt-8 rounded-xl border border-border bg-white p-6 text-center">
             <p className="body-lg text-charcoal">
               All items have been claimed!
@@ -287,39 +380,11 @@ export default function BringPage({
         {/* No items message */}
         {items.length === 0 && (
           <div className="mt-8 rounded-xl border border-border bg-white p-6 text-center">
-            <p className="body-lg text-charcoal">
-              No items to bring yet.
-            </p>
+            <p className="body-lg text-charcoal">No items to bring yet.</p>
             <p className="body-base mt-2 text-warm-gray">
-              Check back later or text Joe if you&rsquo;d like to bring something.
+              Check back later or text Joe if you&rsquo;d like to bring
+              something.
             </p>
-          </div>
-        )}
-
-        {/* What others are bringing */}
-        {otherClaimedItems.length > 0 && (
-          <div className="mt-8">
-            <h2 className="heading-2 text-charcoal">
-              What others are bringing
-            </h2>
-            <div className="mt-4 space-y-3">
-              {otherClaimedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-border bg-cream/50 p-4"
-                >
-                  <p className="body-base text-charcoal">
-                    <span className="font-medium">{item.claimer_first_name}</span>{" "}
-                    is bringing {item.category.toLowerCase()}
-                  </p>
-                  {item.description && (
-                    <p className="body-sm text-warm-gray">
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
