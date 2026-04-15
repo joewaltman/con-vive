@@ -97,9 +97,19 @@ export async function PATCH(request: Request) {
       values.push(cleanPhone);
       paramIndex++;
     }
+    if (body.zipCode !== undefined) {
+      updates.push(`zip_code = $${paramIndex}`);
+      values.push(body.zipCode || null);
+      paramIndex++;
+    }
     if (body.ageRange !== undefined) {
       updates.push(`age_range = $${paramIndex}`);
       values.push(body.ageRange);
+      paramIndex++;
+    }
+    if (body.gender !== undefined) {
+      updates.push(`gender = $${paramIndex}`);
+      values.push(body.gender || null);
       paramIndex++;
     }
     if (body.soloOrCouple !== undefined) {

@@ -13,6 +13,8 @@ interface ResumeData {
   email: string;
   phone: string | null;
   age_range: string | null;
+  zip_code: string | null;
+  gender: string | null;
   solo_or_couple: string | null;
   dietary_notes: string | null;
   available_days: string[] | null;

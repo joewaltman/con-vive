@@ -31,6 +31,8 @@ interface ResumeData {
   email: string;
   phone: string | null;
   age_range: string | null;
+  zip_code: string | null;
+  gender: string | null;
   solo_or_couple: string | null;
   dietary_notes: string | null;
   available_days: string[] | null;
@@ -56,7 +58,9 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
     // Page 2
     phone: "",
     phoneDigits: "",
+    zipCode: "",
     ageRange: "",
+    gender: "",
     soloOrCouple: "",
     dietaryRestrictions: "",
     availableDays: [...DAYS], // All checked by default
@@ -85,7 +89,9 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
         email: resumeData.email || "",
         phone: resumeData.phone ? formatPhoneNumber(resumeData.phone) : "",
         phoneDigits: resumeData.phone || "",
+        zipCode: resumeData.zip_code || "",
         ageRange: resumeData.age_range || "",
+        gender: resumeData.gender || "",
         soloOrCouple: resumeData.solo_or_couple || "",
         dietaryRestrictions: resumeData.dietary_notes || "",
         availableDays: resumeData.available_days || [...DAYS],
@@ -205,7 +211,9 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
         body: JSON.stringify({
           recordId,
           phone: formData.phoneDigits,
+          zipCode: formData.zipCode || null,
           ageRange: formData.ageRange,
+          gender: formData.gender || null,
           soloOrCouple: formData.soloOrCouple,
           dietaryRestrictions: formData.dietaryRestrictions,
           availableDays: formData.availableDays.join(", "),
@@ -368,6 +376,22 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
             </div>
 
             <div>
+              <label htmlFor="zipCode" className={labelClass}>
+                Zip Code
+              </label>
+              <input
+                type="text"
+                id="zipCode"
+                value={formData.zipCode}
+                onChange={(e) => updateField("zipCode", e.target.value.slice(0, 10))}
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="92024"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
               <label htmlFor="ageRange" className={labelClass}>
                 Age Range *
               </label>
@@ -386,6 +410,24 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
                 <option value="70+">70+</option>
               </select>
               {errors.ageRange && <p className={errorClass}>{errors.ageRange}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="gender" className={labelClass}>
+                Gender
+              </label>
+              <select
+                id="gender"
+                value={formData.gender}
+                onChange={(e) => updateField("gender", e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Select...</option>
+                <option value="Man">Man</option>
+                <option value="Woman">Woman</option>
+                <option value="Non-binary">Non-binary</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
             </div>
 
             <div>

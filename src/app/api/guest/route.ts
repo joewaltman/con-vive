@@ -8,6 +8,8 @@ interface Guest {
   email: string;
   phone_clean: string | null;
   age_range: string | null;
+  zip_code: string | null;
+  gender: string | null;
   solo_or_couple: string | null;
   dietary_notes: string | null;
   available_days: string[] | null;
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   const guests = await query<Guest>(
-    `SELECT id, first_name, last_name, email, phone_clean, age_range, solo_or_couple, dietary_notes, available_days
+    `SELECT id, first_name, last_name, email, phone_clean, age_range, zip_code, gender, solo_or_couple, dietary_notes, available_days
      FROM guests
      WHERE resume_token = $1`,
     [token]
@@ -41,6 +43,8 @@ export async function GET(request: Request) {
     email: guest.email,
     phone: guest.phone_clean,
     age_range: guest.age_range,
+    zip_code: guest.zip_code,
+    gender: guest.gender,
     solo_or_couple: guest.solo_or_couple,
     dietary_notes: guest.dietary_notes,
     available_days: guest.available_days,
