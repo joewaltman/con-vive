@@ -150,17 +150,17 @@ export async function POST(request: Request) {
         [guest.id, message.body, message.id, message.conversationId, guest.sequence_step, flaggedReason]
       );
 
-      // Update guest: pause sequence and set last replied
+      // Update guest: set last replied
       // If replying to Step 3 (curiosity question), save response to surprising_knowledge
       if (guest.sequence_step === 3) {
         await query(
-          `UPDATE guests SET last_replied_at = NOW(), sequence_paused = TRUE, surprising_knowledge = $2, updated_at = NOW() WHERE id = $1`,
+          `UPDATE guests SET last_replied_at = NOW(), surprising_knowledge = $2, updated_at = NOW() WHERE id = $1`,
           [guest.id, message.body]
         );
         console.log(`[Quo Webhook] Saved Step 3 reply to surprising_knowledge for ${guest.first_name}`);
       } else {
         await query(
-          `UPDATE guests SET last_replied_at = NOW(), sequence_paused = TRUE, updated_at = NOW() WHERE id = $1`,
+          `UPDATE guests SET last_replied_at = NOW(), updated_at = NOW() WHERE id = $1`,
           [guest.id]
         );
       }

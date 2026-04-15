@@ -174,6 +174,7 @@ async function main() {
        WHERE sequence_step = 1
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND last_message_sent_at < NOW() - INTERVAL '30 minutes'
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
@@ -209,6 +210,7 @@ async function main() {
        WHERE sequence_step = 1
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND next_sequence_scheduled_at IS NOT NULL
          AND next_sequence_scheduled_at <= NOW()
          AND phone_clean IS NOT NULL
@@ -269,6 +271,7 @@ async function main() {
        WHERE sequence_step = 2
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND last_message_sent_at < NOW() - INTERVAL '2 days'
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
@@ -304,6 +307,7 @@ async function main() {
        WHERE sequence_step = 2
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND next_sequence_scheduled_at IS NOT NULL
          AND next_sequence_scheduled_at <= NOW()
          AND phone_clean IS NOT NULL
@@ -364,6 +368,7 @@ async function main() {
        WHERE sequence_step = 3
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND last_message_sent_at < NOW() - INTERVAL '5 days'
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
@@ -399,6 +404,7 @@ async function main() {
        WHERE sequence_step = 3
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
+         AND priority IS NULL
          AND next_sequence_scheduled_at IS NOT NULL
          AND next_sequence_scheduled_at <= NOW()
          AND phone_clean IS NOT NULL
