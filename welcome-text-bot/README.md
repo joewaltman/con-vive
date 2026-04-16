@@ -19,6 +19,7 @@ npm start
 
 - `DATABASE_URL` — Postgres connection string
 - `QUO_API_KEY` — OpenPhone API key
+- `ANTHROPIC_API_KEY` — Anthropic API key (for personalized M1 messages; falls back to generic greeting if not set)
 
 ## Railway Cron Setup
 

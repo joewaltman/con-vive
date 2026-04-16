@@ -21,16 +21,34 @@ interface SendableGuest extends Guest {
   next_sequence_scheduled_at: Date;
 }
 
-function buildStep2Message(firstName: string): string {
-  return `Hey ${firstName}! Do you have an Instagram, LinkedIn, or anywhere I can take a quick look? Sometimes it means we can skip a call entirely. — Joe`;
+function buildStep2Message(firstName: string): { message: string; variant: string } {
+  const variant = Math.random() < 0.5 ? 'C' : 'E';
+  if (variant === 'C') {
+    return {
+      message: `Hey ${firstName}, Joe from Con-Vive. Something I've been asking guests lately: if you could sit next to anyone at a dinner, not someone famous, just a person with a specific skill or experience you find fascinating, who would you want next to you? - Joe`,
+      variant,
+    };
+  } else {
+    return {
+      message: `Hey ${firstName}, Joe from Con-Vive. Here's something I like to ask: if you had to teach the table something in under two minutes, no prep, what would you go with? - Joe`,
+      variant,
+    };
+  }
 }
 
-function buildStep3Message(): string {
-  return `One quick question while I'm putting your table together — what do you know a surprising amount about? Doesn't have to be glamorous. — Joe`;
-}
-
-function buildStep4Message(firstName: string): string {
-  return `Hey ${firstName}! Still would love to get you to a dinner when the timing is right. Whenever you're ready, just reply here. — Joe`;
+function buildStep3Message(firstName: string): { message: string; variant: string } {
+  const variant = Math.random() < 0.5 ? 'D' : 'E';
+  if (variant === 'D') {
+    return {
+      message: `Hey ${firstName}, one more from me. This always starts the best dinner conversations: what's an opinion you hold that most people in your circle would disagree with? - Joe`,
+      variant,
+    };
+  } else {
+    return {
+      message: `Hey ${firstName}, one more from me. This is probably my favorite question: what's something you used to believe strongly but completely changed your mind about? - Joe`,
+      variant,
+    };
+  }
 }
 
 async function sendSms(to: string, content: string): Promise<{ id: string }> {
@@ -80,6 +98,22 @@ async function ensureMigration(pool: Pool): Promise<void> {
       ON guests(next_sequence_scheduled_at)
       WHERE next_sequence_scheduled_at IS NOT NULL
     `);
+    console.log("Migration complete.");
+  }
+}
+
+/**
+ * Ensure m2_variant and m3_variant columns exist
+ */
+async function ensureVariantColumns(pool: Pool): Promise<void> {
+  const { rows } = await pool.query(`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'guests' AND column_name = 'm2_variant'
+  `);
+  if (rows.length === 0) {
+    console.log("Adding m2_variant and m3_variant columns...");
+    await pool.query(`ALTER TABLE guests ADD COLUMN m2_variant CHAR(1)`);
+    await pool.query(`ALTER TABLE guests ADD COLUMN m3_variant CHAR(1)`);
     console.log("Migration complete.");
   }
 }
@@ -157,15 +191,16 @@ async function main() {
   });
 
   try {
-    // Ensure migration is applied
+    // Ensure migrations are applied
     await ensureMigration(pool);
+    await ensureVariantColumns(pool);
 
     let totalScheduled = 0;
     let totalSent = 0;
     let totalFailed = 0;
 
-    // STEP 2: Social link ask
-    console.log("\n--- Step 2: Social link ask ---");
+    // STEP 2 (M2): Prompt question
+    console.log("\n--- Step 2 (M2): Prompt question ---");
 
     // Phase A: Schedule eligible guests
     const { rows: step2ToSchedule } = await pool.query<SchedulableGuest>(
@@ -175,7 +210,8 @@ async function main() {
          AND sequence_paused = FALSE
          AND sequence_completed = FALSE
          AND priority IS NULL
-         AND last_message_sent_at < NOW() - INTERVAL '30 minutes'
+         AND last_message_sent_at < NOW() - INTERVAL '48 hours'
+         AND last_replied_at IS NULL
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
@@ -184,12 +220,12 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step2ToSchedule.length} guest(s) to schedule for Step 2`);
+    console.log(`Found ${step2ToSchedule.length} guest(s) to schedule for M2`);
 
     for (const guest of step2ToSchedule) {
       const scheduledTime = generateRandomSendTime();
       if (dryRun) {
-        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 2 at ${scheduledTime.toISOString()}`);
+        console.log(`[DRY RUN] Would schedule ${guest.first_name} for M2 at ${scheduledTime.toISOString()}`);
       } else {
         await pool.query(
           `UPDATE guests
@@ -198,7 +234,7 @@ async function main() {
            WHERE id = $1`,
           [guest.id, scheduledTime]
         );
-        console.log(`Scheduled ${guest.first_name} for Step 2 at ${scheduledTime.toISOString()}`);
+        console.log(`Scheduled ${guest.first_name} for M2 at ${scheduledTime.toISOString()}`);
       }
       totalScheduled++;
     }
@@ -213,6 +249,7 @@ async function main() {
          AND priority IS NULL
          AND next_sequence_scheduled_at IS NOT NULL
          AND next_sequence_scheduled_at <= NOW()
+         AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
        ORDER BY next_sequence_scheduled_at ASC
@@ -220,15 +257,15 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step2ToSend.length} guest(s) ready to send Step 2`);
+    console.log(`Found ${step2ToSend.length} guest(s) ready to send M2`);
 
     for (const guest of step2ToSend) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
-      const message = buildStep2Message(guest.first_name);
+      const { message, variant } = buildStep2Message(guest.first_name);
 
       if (dryRun) {
-        console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}): "${message}"`);
+        console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}) [variant ${variant}]: "${message}"`);
         totalSent++;
         continue;
       }
@@ -241,9 +278,10 @@ async function main() {
            SET sequence_step = 2,
                last_message_sent_at = NOW(),
                next_sequence_scheduled_at = NULL,
+               m2_variant = $2,
                updated_at = NOW()
            WHERE id = $1`,
-          [guest.id]
+          [guest.id, variant]
         );
 
         await pool.query(
@@ -252,17 +290,17 @@ async function main() {
           [guest.id, message, quoMessageId]
         );
 
-        console.log(`Sent Step 2 to ${guest.first_name} (***${phoneLast4})`);
+        console.log(`Sent M2 to ${guest.first_name} (***${phoneLast4}) [variant ${variant}]`);
         totalSent++;
         await sleep(DELAY_MS);
       } catch (err) {
-        console.error(`FAILED Step 2 for ${guest.first_name} (***${phoneLast4}):`, err);
+        console.error(`FAILED M2 for ${guest.first_name} (***${phoneLast4}):`, err);
         totalFailed++;
       }
     }
 
-    // STEP 3: Curiosity question
-    console.log("\n--- Step 3: Curiosity question ---");
+    // STEP 3 (M3): Follow-up prompt
+    console.log("\n--- Step 3 (M3): Follow-up prompt ---");
 
     // Phase A: Schedule eligible guests
     const { rows: step3ToSchedule } = await pool.query<SchedulableGuest>(
@@ -273,6 +311,7 @@ async function main() {
          AND sequence_completed = FALSE
          AND priority IS NULL
          AND last_message_sent_at < NOW() - INTERVAL '2 days'
+         AND last_replied_at IS NULL
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
@@ -281,12 +320,12 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step3ToSchedule.length} guest(s) to schedule for Step 3`);
+    console.log(`Found ${step3ToSchedule.length} guest(s) to schedule for M3`);
 
     for (const guest of step3ToSchedule) {
       const scheduledTime = generateRandomSendTime();
       if (dryRun) {
-        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 3 at ${scheduledTime.toISOString()}`);
+        console.log(`[DRY RUN] Would schedule ${guest.first_name} for M3 at ${scheduledTime.toISOString()}`);
       } else {
         await pool.query(
           `UPDATE guests
@@ -295,7 +334,7 @@ async function main() {
            WHERE id = $1`,
           [guest.id, scheduledTime]
         );
-        console.log(`Scheduled ${guest.first_name} for Step 3 at ${scheduledTime.toISOString()}`);
+        console.log(`Scheduled ${guest.first_name} for M3 at ${scheduledTime.toISOString()}`);
       }
       totalScheduled++;
     }
@@ -310,6 +349,7 @@ async function main() {
          AND priority IS NULL
          AND next_sequence_scheduled_at IS NOT NULL
          AND next_sequence_scheduled_at <= NOW()
+         AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
        ORDER BY next_sequence_scheduled_at ASC
@@ -317,15 +357,15 @@ async function main() {
       [MAX_PER_RUN]
     );
 
-    console.log(`Found ${step3ToSend.length} guest(s) ready to send Step 3`);
+    console.log(`Found ${step3ToSend.length} guest(s) ready to send M3`);
 
     for (const guest of step3ToSend) {
       const phoneLast4 = guest.phone_clean.slice(-4);
       const to = `+1${guest.phone_clean}`;
-      const message = buildStep3Message();
+      const { message, variant } = buildStep3Message(guest.first_name);
 
       if (dryRun) {
-        console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}): "${message}"`);
+        console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}) [variant ${variant}]: "${message}"`);
         totalSent++;
         continue;
       }
@@ -338,9 +378,10 @@ async function main() {
            SET sequence_step = 3,
                last_message_sent_at = NOW(),
                next_sequence_scheduled_at = NULL,
+               m3_variant = $2,
                updated_at = NOW()
            WHERE id = $1`,
-          [guest.id]
+          [guest.id, variant]
         );
 
         await pool.query(
@@ -349,153 +390,48 @@ async function main() {
           [guest.id, message, quoMessageId]
         );
 
-        console.log(`Sent Step 3 to ${guest.first_name} (***${phoneLast4})`);
+        console.log(`Sent M3 to ${guest.first_name} (***${phoneLast4}) [variant ${variant}]`);
         totalSent++;
         await sleep(DELAY_MS);
       } catch (err) {
-        console.error(`FAILED Step 3 for ${guest.first_name} (***${phoneLast4}):`, err);
+        console.error(`FAILED M3 for ${guest.first_name} (***${phoneLast4}):`, err);
         totalFailed++;
       }
     }
 
-    // STEP 4: Soft nudge
-    console.log("\n--- Step 4: Soft nudge ---");
+    // Silent close-out for guests who didn't respond to M3
+    console.log("\n--- Sequence close-out ---");
+    const closeOutQuery = `
+      UPDATE guests
+      SET sequence_completed = TRUE,
+          updated_at = NOW()
+      WHERE sequence_step = 3
+        AND sequence_paused = FALSE
+        AND sequence_completed = FALSE
+        AND priority IS NULL
+        AND last_message_sent_at < NOW() - INTERVAL '48 hours'
+        AND last_replied_at IS NULL
+        AND phone_clean IS NOT NULL
+    `;
 
-    // Phase A: Schedule eligible guests
-    const { rows: step4ToSchedule } = await pool.query<SchedulableGuest>(
-      `SELECT id, first_name
-       FROM guests
-       WHERE sequence_step = 3
-         AND sequence_paused = FALSE
-         AND sequence_completed = FALSE
-         AND priority IS NULL
-         AND last_message_sent_at < NOW() - INTERVAL '5 days'
-         AND next_sequence_scheduled_at IS NULL
-         AND phone_clean IS NOT NULL
-         AND phone_clean != ''
-       ORDER BY last_message_sent_at ASC
-       LIMIT $1`,
-      [MAX_PER_RUN]
-    );
-
-    console.log(`Found ${step4ToSchedule.length} guest(s) to schedule for Step 4`);
-
-    for (const guest of step4ToSchedule) {
-      const scheduledTime = generateRandomSendTime();
-      if (dryRun) {
-        console.log(`[DRY RUN] Would schedule ${guest.first_name} for Step 4 at ${scheduledTime.toISOString()}`);
-      } else {
-        await pool.query(
-          `UPDATE guests
-           SET next_sequence_scheduled_at = $2,
-               updated_at = NOW()
-           WHERE id = $1`,
-          [guest.id, scheduledTime]
-        );
-        console.log(`Scheduled ${guest.first_name} for Step 4 at ${scheduledTime.toISOString()}`);
-      }
-      totalScheduled++;
-    }
-
-    // Phase B: Send scheduled texts
-    const { rows: step4ToSend } = await pool.query<SendableGuest>(
-      `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
-       FROM guests
-       WHERE sequence_step = 3
-         AND sequence_paused = FALSE
-         AND sequence_completed = FALSE
-         AND priority IS NULL
-         AND next_sequence_scheduled_at IS NOT NULL
-         AND next_sequence_scheduled_at <= NOW()
-         AND phone_clean IS NOT NULL
-         AND phone_clean != ''
-       ORDER BY next_sequence_scheduled_at ASC
-       LIMIT $1`,
-      [MAX_PER_RUN]
-    );
-
-    console.log(`Found ${step4ToSend.length} guest(s) ready to send Step 4`);
-
-    for (const guest of step4ToSend) {
-      const phoneLast4 = guest.phone_clean.slice(-4);
-      const to = `+1${guest.phone_clean}`;
-      const message = buildStep4Message(guest.first_name);
-
-      if (dryRun) {
-        console.log(`[DRY RUN] Would text ${guest.first_name} (***${phoneLast4}): "${message}"`);
-        totalSent++;
-        continue;
-      }
-
-      try {
-        const { id: quoMessageId } = await sendSms(to, message);
-
-        await pool.query(
-          `UPDATE guests
-           SET sequence_step = 4,
-               sequence_completed = TRUE,
-               last_message_sent_at = NOW(),
-               next_sequence_scheduled_at = NULL,
-               updated_at = NOW()
-           WHERE id = $1`,
-          [guest.id]
-        );
-
-        // Insert message and mark as flagged for follow-up
-        await pool.query(
-          `INSERT INTO messages (guest_id, direction, body, quo_message_id, sequence_step, message_type, flagged, flagged_reason)
-           VALUES ($1, 'outbound', $2, $3, 4, 'sequence', TRUE, 'sequence_complete_no_response')`,
-          [guest.id, message, quoMessageId]
-        );
-
-        console.log(`Sent Step 4 to ${guest.first_name} (***${phoneLast4}) - sequence complete`);
-        totalSent++;
-        await sleep(DELAY_MS);
-      } catch (err) {
-        console.error(`FAILED Step 4 for ${guest.first_name} (***${phoneLast4}):`, err);
-        totalFailed++;
-      }
-    }
-
-    // 48-HOUR NO-REPLY CHECK
-    // Check guests at step 2 who haven't replied in 48h but have >10 words in curious_about
-    console.log("\n--- 48-hour no-reply check ---");
-    const { rows: noReplyGuests } = await pool.query<Guest>(
-      `SELECT id, first_name, phone_clean, curious_about
-       FROM guests
-       WHERE sequence_step = 2
-         AND sequence_paused = FALSE
-         AND last_message_sent_at < NOW() - INTERVAL '48 hours'
-         AND last_replied_at IS NULL
-         AND curious_about IS NOT NULL
-         AND array_length(regexp_split_to_array(curious_about, '\\s+'), 1) > 10
-         AND phone_clean IS NOT NULL`,
-      []
-    );
-
-    console.log(`Found ${noReplyGuests.length} guest(s) with detailed curious_about but no reply`);
-
-    for (const guest of noReplyGuests) {
-      if (dryRun) {
-        console.log(`[DRY RUN] Would flag ${guest.first_name} for unrouted_reply`);
-        continue;
-      }
-
-      // Get the last message for this guest and flag it
-      await pool.query(
-        `UPDATE messages
-         SET flagged = TRUE,
-             flagged_reason = 'unrouted_reply'
-         WHERE id = (
-           SELECT id FROM messages
-           WHERE guest_id = $1 AND direction = 'outbound'
-           ORDER BY sent_at DESC
-           LIMIT 1
-         )`,
-        [guest.id]
+    if (dryRun) {
+      const { rows: toCloseOut } = await pool.query(
+        `SELECT id, first_name FROM guests
+         WHERE sequence_step = 3
+           AND sequence_paused = FALSE
+           AND sequence_completed = FALSE
+           AND priority IS NULL
+           AND last_message_sent_at < NOW() - INTERVAL '48 hours'
+           AND last_replied_at IS NULL
+           AND phone_clean IS NOT NULL`
       );
-
-      console.log(`Flagged ${guest.first_name} for manual review (has detailed curious_about)`);
+      console.log(`[DRY RUN] Would close out ${toCloseOut.length} guest(s) with no M3 response`);
+      for (const guest of toCloseOut) {
+        console.log(`[DRY RUN] Would close out ${guest.first_name}`);
+      }
+    } else {
+      const { rowCount } = await pool.query(closeOutQuery);
+      console.log(`Closed out ${rowCount} guest(s) with no M3 response`);
     }
 
     console.log(`\nDone. Scheduled: ${totalScheduled}, Sent: ${totalSent}, Failed: ${totalFailed}`);

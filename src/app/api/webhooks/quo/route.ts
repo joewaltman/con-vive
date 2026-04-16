@@ -35,9 +35,9 @@ function determineFlaggedReason(body: string, sequenceStep: number): string | nu
   const hasUrl = /https?:\/\/|www\./i.test(body);
   const hasSocialHandle = /@[\w]+|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com/i.test(body);
 
-  // If at step 2 (social link ask) and contains URL/social
-  if (sequenceStep === 2 && (hasUrl || hasSocialHandle)) {
-    return "unrouted_reply";
+  // If at step 1 or 2 and contains URL/social link
+  if ((sequenceStep === 1 || sequenceStep === 2) && (hasUrl || hasSocialHandle)) {
+    return "social_link_received";
   }
 
   // Check if conversational or contains question
@@ -150,20 +150,11 @@ export async function POST(request: Request) {
         [guest.id, message.body, message.id, message.conversationId, guest.sequence_step, flaggedReason]
       );
 
-      // Update guest: set last replied
-      // If replying to Step 3 (curiosity question), save response to surprising_knowledge
-      if (guest.sequence_step === 3) {
-        await query(
-          `UPDATE guests SET last_replied_at = NOW(), surprising_knowledge = $2, updated_at = NOW() WHERE id = $1`,
-          [guest.id, message.body]
-        );
-        console.log(`[Quo Webhook] Saved Step 3 reply to surprising_knowledge for ${guest.first_name}`);
-      } else {
-        await query(
-          `UPDATE guests SET last_replied_at = NOW(), updated_at = NOW() WHERE id = $1`,
-          [guest.id]
-        );
-      }
+      // Update guest: set last replied (pulls them out of sequence)
+      await query(
+        `UPDATE guests SET last_replied_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [guest.id]
+      );
 
       console.log(`[Quo Webhook] Recorded inbound message from ${guest.first_name}, flagged: ${flaggedReason}`);
     } else if (type === "message.delivered") {
