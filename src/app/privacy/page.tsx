@@ -32,7 +32,7 @@ export default function TermsAndPrivacy() {
         <h3 className="heading-3 mb-4 mt-8 text-charcoal">1. Introduction and Acceptance</h3>
         <p className="body-base mb-6">
           Welcome to Con-Vive. These Terms of Service (&quot;Terms&quot;) constitute a legally binding
-          agreement between you and Con-Vive (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;),
+          agreement between you and Con-Vive Dinners Inc. (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;),
           operated by Joe Mazzella in Encinitas, California. By creating an account, signing up for a
           dinner, hosting a dinner, or using our website at con-vive.com (the &quot;Platform&quot;),
           you agree to be bound by these Terms.
@@ -535,7 +535,7 @@ export default function TermsAndPrivacy() {
           at:
         </p>
         <p className="body-base mb-6">
-          <strong>Con-Vive</strong>
+          <strong>Con-Vive Dinners Inc.</strong>
           <br />
           Encinitas, California
           <br />

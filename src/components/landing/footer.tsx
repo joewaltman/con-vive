@@ -18,7 +18,7 @@ export function Footer() {
         >
           joe@con-vive.com
         </a>
-        <p className="body-sm mt-4 text-warm-gray">&copy; 2026 Con-Vive</p>
+        <p className="body-sm mt-4 text-warm-gray">&copy; 2026 Con-Vive Dinners Inc.</p>
       </div>
     </footer>
   );
