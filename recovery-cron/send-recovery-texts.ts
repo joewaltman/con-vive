@@ -45,6 +45,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function connectWithRetry(pool: Pool, maxRetries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await pool.query("SELECT 1");
+      return;
+    } catch (err: unknown) {
+      const error = err as { code?: string };
+      const isTransient = error.code === "EAI_AGAIN" || error.code === "ENOTFOUND" || error.code === "ECONNREFUSED";
+      if (isTransient && attempt < maxRetries) {
+        const delayMs = attempt * 2000; // 2s, 4s, 6s
+        console.log(`Database connection attempt ${attempt} failed (${error.code}), retrying in ${delayMs}ms...`);
+        await sleep(delayMs);
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
 
@@ -56,6 +75,9 @@ async function main() {
   });
 
   try {
+    // Retry connection in case of transient DNS failures
+    await connectWithRetry(pool);
+
     // Find guests who dropped off at Page 2 (have phone but no curious_about)
     // and haven't received a recovery text yet
     const { rows: guests } = await pool.query<Guest>(

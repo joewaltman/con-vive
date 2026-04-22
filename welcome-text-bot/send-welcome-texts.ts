@@ -329,6 +329,25 @@ async function ensureSchedulingMigration(pool: Pool): Promise<void> {
   }
 }
 
+async function connectWithRetry(pool: Pool, maxRetries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await pool.query("SELECT 1");
+      return;
+    } catch (err: unknown) {
+      const error = err as { code?: string };
+      const isTransient = error.code === "EAI_AGAIN" || error.code === "ENOTFOUND" || error.code === "ECONNREFUSED";
+      if (isTransient && attempt < maxRetries) {
+        const delayMs = attempt * 2000;
+        console.log(`Database connection attempt ${attempt} failed (${error.code}), retrying in ${delayMs}ms...`);
+        await sleep(delayMs);
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const backfill = process.argv.includes("--backfill");
@@ -342,6 +361,9 @@ async function main() {
   });
 
   try {
+    // Retry connection in case of transient DNS failures
+    await connectWithRetry(pool);
+
     // 1. Run migration (add quo_contact_id if missing)
     await runMigration(pool);
 
