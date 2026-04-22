@@ -156,7 +156,9 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
     if (formData.phoneDigits.length !== 10) {
       newErrors.phone = "Please enter a valid 10-digit US phone number";
     }
+    if (!formData.zipCode.trim()) newErrors.zipCode = "Zip code is required";
     if (!formData.ageRange) newErrors.ageRange = "Please select your age range";
+    if (!formData.gender) newErrors.gender = "Please select your gender";
     if (!formData.soloOrCouple) newErrors.soloOrCouple = "Please select an option";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -211,9 +213,9 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
         body: JSON.stringify({
           recordId,
           phone: formData.phoneDigits,
-          zipCode: formData.zipCode || null,
+          zipCode: formData.zipCode,
           ageRange: formData.ageRange,
-          gender: formData.gender || null,
+          gender: formData.gender,
           soloOrCouple: formData.soloOrCouple,
           dietaryRestrictions: formData.dietaryRestrictions,
           availableDays: formData.availableDays.join(", "),
@@ -377,7 +379,7 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
 
             <div>
               <label htmlFor="zipCode" className={labelClass}>
-                Zip Code
+                Zip Code *
               </label>
               <input
                 type="text"
@@ -389,6 +391,7 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
                 placeholder="92024"
                 className={inputClass}
               />
+              {errors.zipCode && <p className={errorClass}>{errors.zipCode}</p>}
             </div>
 
             <div>
@@ -414,7 +417,7 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
 
             <div>
               <label htmlFor="gender" className={labelClass}>
-                Gender
+                Gender *
               </label>
               <select
                 id="gender"
@@ -428,6 +431,7 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
                 <option value="Non-binary">Non-binary</option>
                 <option value="Prefer not to say">Prefer not to say</option>
               </select>
+              {errors.gender && <p className={errorClass}>{errors.gender}</p>}
             </div>
 
             <div>
