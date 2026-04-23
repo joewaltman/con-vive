@@ -7,8 +7,9 @@ interface CalendarDinner {
 }
 
 function parseDateTime(date: string, time: string): Date {
-  // Parse date (YYYY-MM-DD) and time (e.g., "7:00 PM")
-  const dateObj = new Date(date + "T00:00:00");
+  // Parse date (YYYY-MM-DD or ISO string) and time (e.g., "7:00 PM")
+  const dateOnly = date.split("T")[0];
+  const dateObj = new Date(dateOnly + "T00:00:00Z");
 
   // Parse time
   const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
