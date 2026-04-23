@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-terracotta: #B85C38;
+  --color-terracotta-light: #D4795A;
+  --color-terracotta-dark: #8B4730;
+  --color-cream: #FAF5F0;
+  --color-cream-dark: #EDE8E2;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--color-cream);
+  color: #1a1a1a;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4b5a8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a89888;
+}
+
+/* Form input styles */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  @apply rounded border border-gray-300 bg-white px-3 py-2 text-sm transition-colors;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+  @apply border-terracotta ring-1 ring-terracotta outline-none;
+}
+
+/* Modified field indicator */
+.field-modified {
+  @apply border-amber-400 bg-amber-50;
+}
