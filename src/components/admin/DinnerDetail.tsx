@@ -322,7 +322,7 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
       {/* Action Buttons */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push(`/dinners/${dinnerId}/shortlist`)}
+          onClick={() => router.push(`/admin/dinners/${dinnerId}/shortlist`)}
           className="px-4 py-2 text-sm font-medium text-white bg-terracotta rounded-lg hover:bg-terracotta-dark transition-colors"
         >
           Add Invitees

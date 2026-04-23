@@ -31,7 +31,7 @@ export default function DinnerList({ onCreateClick }: DinnerListProps) {
   const pastDinners = useMemo(() => pastData?.dinners || [], [pastData]);
 
   const handleDinnerClick = (dinner: Dinner) => {
-    router.push(`/dinners/${dinner.id}`);
+    router.push(`/admin/dinners/${dinner.id}`);
   };
 
   if (loadingUpcoming && loadingPast) {
