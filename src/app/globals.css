@@ -3,6 +3,9 @@
 @theme inline {
   --color-cream: #FAF5F0;
   --color-terracotta: #B85C38;
+  --color-terracotta-light: #D4795A;
+  --color-terracotta-dark: #8B4730;
+  --color-cream-dark: #EDE8E2;
   --color-charcoal: #2C2C2C;
   --color-warm-gray: #6B6B6B;
   --color-border: #E0D5C8;
@@ -153,5 +156,35 @@
 
   .warm-shadow {
     box-shadow: 0 8px 30px rgba(184, 92, 56, 0.08);
+  }
+}
+
+/* Admin dashboard styles */
+@layer utilities {
+  /* Custom scrollbar for admin */
+  .admin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .admin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-scrollbar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+
+  .admin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+
+  /* Form input focus styles for admin */
+  .admin-input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--color-terracotta);
+    border-color: var(--color-terracotta);
   }
 }

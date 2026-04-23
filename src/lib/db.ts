@@ -1,28 +1,29 @@
 import { Pool } from "pg";
 
 // Lazy-initialized connection pool
-let pool: Pool | null = null;
+let _pool: Pool | null = null;
 
 export function getPool(): Pool | null {
-  if (!process.env.DATABASE_URL) {
+  const connectionString = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+  if (!connectionString) {
     return null;
   }
 
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+  if (!_pool) {
+    _pool = new Pool({
+      connectionString,
       ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     });
 
-    pool.on("error", (err) => {
+    _pool.on("error", (err) => {
       console.error("Unexpected PostgreSQL pool error:", err);
     });
   }
 
-  return pool;
+  return _pool;
 }
 
 export async function query<T>(text: string, params?: unknown[]): Promise<T[] | null> {
@@ -52,3 +53,15 @@ export async function queryOrThrow<T>(text: string, params?: unknown[]): Promise
   const result = await pool.query(text, params);
   return result.rows as T[];
 }
+
+// Export pool for admin dashboard compatibility
+// Note: This throws if DATABASE_URL is not set, unlike getPool() which returns null
+export const pool = new Proxy({} as Pool, {
+  get(_, prop) {
+    const p = getPool();
+    if (!p) {
+      throw new Error("PostgreSQL: No pool available (DATABASE_URL not set)");
+    }
+    return p[prop as keyof Pool];
+  },
+});
