@@ -25,17 +25,17 @@ export default function Sidebar() {
   const attentionCount = attentionData?.count ?? 0;
 
   const navItems = [
-    { name: 'Guests', shortName: 'G', href: '/', active: pathname === '/' },
-    { name: 'Needs Attention', shortName: '!', href: '/attention', active: pathname === '/attention', badge: attentionCount },
-    { name: 'Dinners', shortName: 'D', href: '/dinners', active: pathname.startsWith('/dinners') },
-    { name: 'Hosts', shortName: 'H', href: '/hosts', active: pathname === '/hosts' },
+    { name: 'Guests', shortName: 'G', href: '/admin', active: pathname === '/admin' },
+    { name: 'Needs Attention', shortName: '!', href: '/admin/attention', active: pathname === '/admin/attention', badge: attentionCount },
+    { name: 'Dinners', shortName: 'D', href: '/admin/dinners', active: pathname.startsWith('/admin/dinners') },
+    { name: 'Hosts', shortName: 'H', href: '/admin/hosts', active: pathname === '/admin/hosts' },
   ];
 
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
       await fetch('/api/admin/auth', { method: 'DELETE' });
-      router.push('/login');
+      router.push('/admin/login');
       router.refresh();
     } catch {
       setLoggingOut(false);

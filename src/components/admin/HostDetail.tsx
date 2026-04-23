@@ -256,7 +256,7 @@ export default function HostDetail({ host, onSave, onBack, showBackButton }: Hos
               ) : (
                 <p className="text-sm text-gray-500">
                   {host.dinnerCount} dinner{host.dinnerCount !== 1 ? 's' : ''} hosted.{' '}
-                  <a href="/dinners" className="text-terracotta hover:underline">
+                  <a href="/admin/dinners" className="text-terracotta hover:underline">
                     View all dinners
                   </a>
                 </p>

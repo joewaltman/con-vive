@@ -210,7 +210,7 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
       mutate('/api/admin/dinners?filter=past');
 
       // Navigate back to dinners list
-      router.push('/dinners');
+      router.push('/admin/dinners');
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -245,7 +245,7 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
           <p className="font-medium">Error loading dinner</p>
           <p className="text-sm mt-1">{error?.message || 'Dinner not found'}</p>
           <button
-            onClick={() => router.push('/dinners')}
+            onClick={() => router.push('/admin/dinners')}
             className="mt-4 text-terracotta hover:underline"
           >
             Back to dinners
@@ -289,7 +289,7 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
       <div className="flex items-start justify-between">
         <div>
           <button
-            onClick={() => router.push('/dinners')}
+            onClick={() => router.push('/admin/dinners')}
             className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
