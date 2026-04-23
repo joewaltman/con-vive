@@ -147,14 +147,19 @@ async function handleBookingCheckoutCompleted(
   }
 
   // Update invitation to booked status
+  // Also set response/confirmed_at for dashboard compatibility
   const updateResult = await query(
     `UPDATE invitations
      SET status = 'booked',
          booked_at = NOW(),
+         response = 'Accepted',
+         confirmed_at = NOW(),
          stripe_payment_intent_id = $1,
+         payment_intent_id = $1,
+         price_paid_cents = $3,
          updated_at = NOW()
      WHERE id = $2`,
-    [session.payment_intent, invitationId]
+    [session.payment_intent, invitationId, session.amount_total]
   );
 
   if (!updateResult) {
