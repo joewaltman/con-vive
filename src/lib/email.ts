@@ -13,7 +13,7 @@ function getResend(): Resend {
   return resendInstance;
 }
 
-const FROM_EMAIL = "Joe from Con-Vive <joe@con-vive.com>";
+const FROM_EMAIL = "Joe from Con-Vive <joe@invite.con-vive.com>";
 
 interface SendEmailOptions {
   to: string;
