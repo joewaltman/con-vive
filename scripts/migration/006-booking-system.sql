@@ -10,6 +10,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_token
   ON invitations(token) WHERE token IS NOT NULL;
 
 -- Add columns to dinners table
+ALTER TABLE dinners ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 6;
 ALTER TABLE dinners ADD COLUMN IF NOT EXISTS dinner_time TEXT DEFAULT '7:00 PM';
 ALTER TABLE dinners ADD COLUMN IF NOT EXISTS price_cents INTEGER DEFAULT 7500;
 ALTER TABLE dinners ADD COLUMN IF NOT EXISTS bring_items JSONB DEFAULT '[]'::jsonb;

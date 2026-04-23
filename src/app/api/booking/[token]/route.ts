@@ -30,6 +30,7 @@ interface DinnerRow {
   dinner_date: string;
   dinner_time: string | null;
   price_cents: number;
+  capacity: number;
   address: string | null;
   google_maps_link: string | null;
   parking_instructions: string | null;
@@ -89,6 +90,7 @@ export async function GET(
   const dinners = await query<DinnerRow>(
     `SELECT id, dinner_name, dinner_date, dinner_time,
             COALESCE(price_cents, 7500) as price_cents,
+            COALESCE(capacity, 6) as capacity,
             address, google_maps_link, parking_instructions,
             what_to_bring, host_name, bring_items, menu, host
      FROM dinners
@@ -116,7 +118,7 @@ export async function GET(
   const genderCounts = getGenderCountsFromBookings(bookedGuests || []);
 
   // Check if this guest can book
-  const constraint = checkGenderConstraint(genderCounts, guest.gender);
+  const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.capacity);
 
   // Parse bring_items from JSONB
   const bringItems: BringItem[] = Array.isArray(dinner.bring_items)
