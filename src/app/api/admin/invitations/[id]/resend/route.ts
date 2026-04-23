@@ -47,10 +47,14 @@ export async function POST(
       );
     }
 
-    if (!invitation.token) {
-      return NextResponse.json(
-        { error: 'Invitation has no token' },
-        { status: 400 }
+    // Generate token if missing
+    let token = invitation.token;
+    if (!token) {
+      const crypto = await import('crypto');
+      token = crypto.randomBytes(32).toString('base64url');
+      await pool.query(
+        'UPDATE invitations SET token = $1 WHERE id = $2',
+        [token, id]
       );
     }
 
@@ -62,7 +66,7 @@ export async function POST(
       : '6:00 PM';
     const priceDollars = (invitation.price_cents || 4000) / 100;
     const websiteBaseUrl = process.env.WEBSITE_BASE_URL || 'https://con-vive.com';
-    const bookingLink = `${websiteBaseUrl}/d/${invitation.token}`;
+    const bookingLink = `${websiteBaseUrl}/d/${token}`;
 
     // Send email
     const emailResult = await sendEmail({
