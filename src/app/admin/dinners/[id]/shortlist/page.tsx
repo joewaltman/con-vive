@@ -38,7 +38,7 @@ export default function ShortlistPage() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   // Build API URL with dietary exclusions
-  const apiUrl = `/api/admin/admin/dinners/${dinnerId}/eligible-guests${
+  const apiUrl = `/api/admin/dinners/${dinnerId}/eligible-guests${
     excludeDietary.length > 0 ? `?excludeDietary=${excludeDietary.join(',')}` : ''
   }`;
 
@@ -50,7 +50,7 @@ export default function ShortlistPage() {
   const handleSendInvites = useCallback(async (guestIds: number[]) => {
     setIsSending(true);
     try {
-      const response = await fetch(`/api/admin/admin/dinners/${dinnerId}/invites`, {
+      const response = await fetch(`/api/admin/dinners/${dinnerId}/invites`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guestIds }),
