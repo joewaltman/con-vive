@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "build": "echo 'No build required'",
     "start": "npx tsx send-recovery-texts.ts",
     "dry-run": "npx tsx send-recovery-texts.ts --dry-run"
   },
