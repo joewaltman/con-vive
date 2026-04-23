@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "build": "echo 'No build needed'",
     "start": "npx tsx send-welcome-texts.ts",
     "dry-run": "npx tsx send-welcome-texts.ts --dry-run",
     "backfill": "npx tsx send-welcome-texts.ts --backfill",
