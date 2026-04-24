@@ -41,14 +41,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
     : '';
 
   const query = `
-    WITH recent_attendance AS (
-      SELECT DISTINCT a.guest_id
-      FROM attendance a
-      JOIN dinners d ON d.id = a.dinner_id
-      WHERE d.dinner_date >= ($2::date - INTERVAL '14 days')
-        AND d.dinner_date < $2::date
-    ),
-    already_invited AS (
+    WITH already_invited AS (
       SELECT guest_id
       FROM invitations
       WHERE dinner_id = $1
@@ -83,14 +76,8 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
         WHERE i2.guest_id = g.id
       ) as last_invited_date
     FROM guests g
-    WHERE g.priority IS NOT NULL
-      AND g.priority < 3
-      AND g.available_days @> ARRAY[$3]::text[]
-      AND g.id NOT IN (SELECT guest_id FROM recent_attendance)
-      AND g.id NOT IN (SELECT guest_id FROM already_invited)
-      ${dinnerTypeClause}
-      ${dietaryClause}
-    ORDER BY g.priority ASC, spark_score DESC NULLS LAST
+    WHERE g.id NOT IN (SELECT guest_id FROM already_invited)
+    ORDER BY g.priority ASC NULLS LAST, spark_score DESC NULLS LAST
   `;
 
   const result = await pool.query(query, params);
