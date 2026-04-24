@@ -23,7 +23,13 @@ interface EligibilityOptions {
  * Ordered by priority ASC, spark_score DESC
  */
 export async function fetchEligibleGuests(options: EligibilityOptions): Promise<ShortlistGuest[]> {
-  const { dinnerId, dinnerDayOfWeek } = options;
+  const { dinnerId, dinnerDayOfWeek, excludeDietary = [] } = options;
+
+  // Build dietary exclusion clause
+  // If excludeDietary has items, exclude guests whose dietary_restrictions overlaps with those
+  const dietaryClause = excludeDietary.length > 0
+    ? `AND NOT (g.dietary_restrictions && $3::text[])`
+    : '';
 
   // Sorting logic:
   // 1. Primary: priority ASC (1 before 2, priority 1 always above priority 2, etc.)
@@ -73,6 +79,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
       FROM guests g
       WHERE g.id NOT IN (SELECT guest_id FROM already_invited)
         AND g.available_days @> ARRAY[$2]::text[]
+        ${dietaryClause}
     )
     SELECT *,
       CASE
@@ -88,7 +95,12 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
       spark_score DESC NULLS LAST
   `;
 
-  const result = await pool.query(query, [dinnerId, dinnerDayOfWeek]);
+  const params: (string | string[])[] = [dinnerId, dinnerDayOfWeek];
+  if (excludeDietary.length > 0) {
+    params.push(excludeDietary);
+  }
+
+  const result = await pool.query(query, params);
 
   return result.rows.map(row => ({
     id: row.id,
