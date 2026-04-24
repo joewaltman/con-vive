@@ -23,22 +23,7 @@ interface EligibilityOptions {
  * Ordered by priority ASC, spark_score DESC
  */
 export async function fetchEligibleGuests(options: EligibilityOptions): Promise<ShortlistGuest[]> {
-  const { dinnerId, dinnerDate, dinnerDayOfWeek, dinnerType, excludeDietary = [] } = options;
-
-  // Build dietary exclusion clause
-  let dietaryClause = '';
-  const params: unknown[] = [dinnerId, dinnerDate, dinnerDayOfWeek];
-
-  if (excludeDietary.length > 0) {
-    const placeholders = excludeDietary.map((_, i) => `$${params.length + i + 1}`).join(', ');
-    dietaryClause = `AND NOT (g.dietary_restrictions && ARRAY[${placeholders}]::text[])`;
-    params.push(...excludeDietary);
-  }
-
-  // Build dinner type clause
-  const dinnerTypeClause = dinnerType === 'singles_only'
-    ? `AND g.solo_or_couple = 'Solo'`
-    : '';
+  const { dinnerId } = options;
 
   const query = `
     WITH already_invited AS (
@@ -80,7 +65,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
     ORDER BY g.priority ASC NULLS LAST, spark_score DESC NULLS LAST
   `;
 
-  const result = await pool.query(query, params);
+  const result = await pool.query(query, [dinnerId]);
 
   return result.rows.map(row => ({
     id: row.id,
