@@ -21,6 +21,7 @@ interface BookingConfirmationEmailProps {
   parkingInstructions: string | null;
   whatToBring: string | null;
   bringItemAssignment: string | null;
+  bringItemsUrl: string | null;
   googleCalendarUrl: string;
   outlookCalendarUrl: string;
   icsDownloadUrl: string;
@@ -36,6 +37,7 @@ export default function BookingConfirmationEmail({
   parkingInstructions,
   whatToBring,
   bringItemAssignment,
+  bringItemsUrl,
   googleCalendarUrl,
   outlookCalendarUrl,
   icsDownloadUrl,
@@ -84,17 +86,22 @@ export default function BookingConfirmationEmail({
             )}
           </Section>
 
-          {(whatToBring || bringItemAssignment) && (
-            <Section style={detailsBox}>
-              <Text style={detailsHeading}>What to Bring</Text>
-              {bringItemAssignment && (
-                <Text style={highlightText}>
-                  You signed up to bring: {bringItemAssignment}
-                </Text>
-              )}
-              {whatToBring && <Text style={detailsText}>{whatToBring}</Text>}
-            </Section>
-          )}
+          <Section style={detailsBox}>
+            <Text style={detailsHeading}>What to Bring</Text>
+            {bringItemAssignment && (
+              <Text style={highlightText}>
+                You signed up to bring: {bringItemAssignment}
+              </Text>
+            )}
+            {whatToBring && <Text style={detailsText}>{whatToBring}</Text>}
+            {bringItemsUrl && (
+              <Text style={detailsText}>
+                <Link href={bringItemsUrl} style={link}>
+                  Sign up to bring something
+                </Link>
+              </Text>
+            )}
+          </Section>
 
           <Section style={calendarSection}>
             <Text style={detailsHeading}>Add to Calendar</Text>

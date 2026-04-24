@@ -218,6 +218,7 @@ async function handleBookingCheckoutCompleted(
 
   const baseUrl = getBaseUrl();
   const icsDownloadUrl = `${baseUrl}/api/calendar/${token}`;
+  const bringItemsUrl = `${baseUrl}/bring/${token}`;
 
   // Generate calendar URLs
   const calendarDinner = {
@@ -246,6 +247,7 @@ async function handleBookingCheckoutCompleted(
         parkingInstructions: dinner.parking_instructions,
         whatToBring: dinner.what_to_bring,
         bringItemAssignment,
+        bringItemsUrl,
         googleCalendarUrl,
         outlookCalendarUrl,
         icsDownloadUrl,
