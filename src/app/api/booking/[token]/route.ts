@@ -89,7 +89,7 @@ export async function GET(
   // Get dinner info
   const dinners = await query<DinnerRow>(
     `SELECT id, dinner_name, dinner_date, dinner_time,
-            COALESCE(price_cents, 7500) as price_cents,
+            COALESCE(price_cents, 4000) as price_cents,
             COALESCE(capacity, 6) as capacity,
             address, google_maps_link, parking_instructions,
             what_to_bring, host_name, bring_items, menu, host

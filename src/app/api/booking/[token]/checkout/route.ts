@@ -96,7 +96,7 @@ export async function POST(
   // Get dinner info
   const dinners = await query<DinnerRow>(
     `SELECT id, dinner_name, dinner_date,
-            COALESCE(price_cents, 7500) as price_cents,
+            COALESCE(price_cents, 4000) as price_cents,
             COALESCE(capacity, 6) as capacity
      FROM dinners
      WHERE id = $1`,
