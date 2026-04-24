@@ -29,7 +29,13 @@ function generateDinnerName(date: string, hostFirstName: string): string {
 function getDefaultCutoff(dinnerDate: string, startTime: string = '18:00'): string {
   const date = new Date(`${dinnerDate}T${startTime}:00`);
   const cutoff = new Date(date.getTime() - 6 * 60 * 60 * 1000); // 6 hours before
-  return cutoff.toISOString().slice(0, 16); // datetime-local format
+  // Format as local datetime-local (not UTC)
+  const year = cutoff.getFullYear();
+  const month = String(cutoff.getMonth() + 1).padStart(2, '0');
+  const day = String(cutoff.getDate()).padStart(2, '0');
+  const hours = String(cutoff.getHours()).padStart(2, '0');
+  const minutes = String(cutoff.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 interface HostCandidate {
@@ -365,11 +371,17 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
                   Price ($)
                 </label>
                 <input
-                  type="number"
-                  min="0"
-                  step="5"
+                  type="text"
+                  inputMode="decimal"
                   value={priceDollars}
-                  onChange={(e) => handleChange('Price Cents', Math.round(parseFloat(e.target.value) * 100) || DEFAULT_PRICE_CENTS)}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      handleChange('Price Cents', Math.round(val * 100));
+                    } else if (e.target.value === '') {
+                      handleChange('Price Cents', DEFAULT_PRICE_CENTS);
+                    }
+                  }}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
                 />
               </div>
@@ -400,7 +412,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Default is 2 days before the dinner
+                Default is 6 hours before dinner start
               </p>
             </div>
           </CollapsibleSection>
