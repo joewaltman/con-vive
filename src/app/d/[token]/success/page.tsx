@@ -265,6 +265,29 @@ export default function BookingSuccessPage({
           </div>
         </div>
 
+        {/* Sign Up to Bring Something */}
+        <div className="mt-8">
+          <a
+            href={`/bring/${token}`}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-terracotta px-6 py-4 text-white font-medium transition-colors hover:bg-terracotta/90"
+          >
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Sign Up to Bring Something
+          </a>
+        </div>
+
         {/* Confirmation Email Notice */}
         <div className="mt-8 rounded-xl bg-cream/50 p-6 text-center">
           <p className="body-base text-charcoal">

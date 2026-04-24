@@ -43,9 +43,9 @@ export async function GET(
     return NextResponse.json({ error: "Token is required" }, { status: 400 });
   }
 
-  // Find invitation by bring_token
+  // Find invitation by token (the booking token)
   const invitations = await query<Invitation>(
-    `SELECT id, guest_id, dinner_id FROM invitations WHERE bring_token = $1`,
+    `SELECT id, guest_id, dinner_id FROM invitations WHERE token = $1`,
     [token]
   );
 
