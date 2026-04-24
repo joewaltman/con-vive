@@ -108,6 +108,7 @@ export async function PATCH(request: Request) {
       paramIndex++;
     }
     if (body.gender !== undefined) {
+      console.log(`[Signup] Setting gender to: "${body.gender}" for guest ${guestId}`);
       updates.push(`gender = $${paramIndex}`);
       values.push(body.gender || null);
       paramIndex++;
@@ -166,7 +167,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Failed to update signup" }, { status: 500 });
     }
 
-    console.log(`[Signup] Updated guest with id: ${guestId}`);
+    console.log(`[Signup] Updated guest with id: ${guestId}, fields: ${updates.join(', ')}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Signup update error:", error);
