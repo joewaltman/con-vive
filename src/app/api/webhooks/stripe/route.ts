@@ -221,9 +221,14 @@ async function handleBookingCheckoutCompleted(
   const bringItemsUrl = `${baseUrl}/bring/${token}`;
 
   // Generate calendar URLs
+  // Convert date to string if it's a Date object
+  const dinnerDateStr = typeof dinner.dinner_date === 'string'
+    ? dinner.dinner_date
+    : new Date(dinner.dinner_date).toISOString().split('T')[0];
+
   const calendarDinner = {
     name: dinner.dinner_name,
-    date: dinner.dinner_date,
+    date: dinnerDateStr,
     time: dinnerTime,
     hostName,
     address: dinner.address || "",
