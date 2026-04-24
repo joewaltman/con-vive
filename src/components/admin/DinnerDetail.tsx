@@ -378,32 +378,86 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
             )}
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Target Guest Count</label>
+            <label className="block text-xs text-gray-500 mb-1">Total Seats</label>
             <input
               type="number"
               min="1"
               max="20"
-              value={Number(getValue('Guest Count')) || 7}
-              onChange={(e) => handleChange('Guest Count', parseInt(e.target.value) || 7)}
-              className={inputClass('Guest Count')}
+              value={Number(getValue('Total Seats')) || 8}
+              onChange={(e) => handleChange('Total Seats', parseInt(e.target.value) || 8)}
+              className={inputClass('Total Seats')}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Price ($)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={(Number(getValue('Price Cents')) || 4000) / 100}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                  handleChange('Price Cents', Math.round(val * 100));
+                }
+              }}
+              className={inputClass('Price Cents')}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Min Per Gender</label>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              value={Number(getValue('Min Per Gender')) || 2}
+              onChange={(e) => handleChange('Min Per Gender', parseInt(e.target.value) || 2)}
+              className={inputClass('Min Per Gender')}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Booking Cutoff</label>
+            <input
+              type="datetime-local"
+              value={String(getValue('Booking Cutoff At') || '').slice(0, 16)}
+              onChange={(e) => handleChange('Booking Cutoff At', e.target.value)}
+              className={inputClass('Booking Cutoff At')}
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Location</label>
+            <label className="block text-xs text-gray-500 mb-1">Address</label>
             <input
               type="text"
-              value={String(getValue('Location') || '')}
-              onChange={(e) => handleChange('Location', e.target.value)}
-              className={inputClass('Location')}
+              value={String(getValue('Address') || '')}
+              onChange={(e) => handleChange('Address', e.target.value)}
+              className={inputClass('Address')}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Parking Instructions</label>
+            <input
+              type="text"
+              value={String(getValue('Parking Note') || '')}
+              onChange={(e) => handleChange('Parking Note', e.target.value)}
+              className={inputClass('Parking Note')}
             />
           </div>
           <div className="col-span-2">
             <label className="block text-xs text-gray-500 mb-1">Menu</label>
-            <input
-              type="text"
+            <textarea
               value={String(getValue('Menu') || '')}
               onChange={(e) => handleChange('Menu', e.target.value)}
+              rows={2}
               className={inputClass('Menu')}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Vibe Descriptor</label>
+            <input
+              type="text"
+              value={String(getValue('Vibe Descriptor') || '')}
+              onChange={(e) => handleChange('Vibe Descriptor', e.target.value)}
+              placeholder="e.g., Cozy evening with great conversation"
+              className={inputClass('Vibe Descriptor')}
             />
           </div>
           <div className="col-span-2">
@@ -411,12 +465,12 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
             <textarea
               value={String(getValue('Notes') || '')}
               onChange={(e) => handleChange('Notes', e.target.value)}
-              rows={3}
+              rows={2}
               className={inputClass('Notes')}
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Stripe Payment Link</label>
+            <label className="block text-xs text-gray-500 mb-1">Stripe Payment Link (Legacy)</label>
             <div className="flex gap-2">
               <input
                 type="url"
