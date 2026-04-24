@@ -65,9 +65,10 @@ export default function ShortlistPage() {
       // Show success message
       const failedCount = result.failed?.length || 0;
       if (failedCount > 0) {
+        const reasons = result.failed.map((f: { guestId: number; reason: string }) => f.reason).join(', ');
         setToast({
-          message: `Sent ${result.sent} invite${result.sent !== 1 ? 's' : ''}, ${failedCount} failed`,
-          type: 'warning' as 'error',
+          message: `Sent ${result.sent}, ${failedCount} failed: ${reasons}`,
+          type: 'error',
         });
       } else {
         setToast({
