@@ -23,7 +23,7 @@ interface EligibilityOptions {
  * Ordered by priority ASC, spark_score DESC
  */
 export async function fetchEligibleGuests(options: EligibilityOptions): Promise<ShortlistGuest[]> {
-  const { dinnerId } = options;
+  const { dinnerId, dinnerDayOfWeek } = options;
 
   // Sorting logic:
   // 1. Primary: priority ASC (1 before 2, priority 1 always above priority 2, etc.)
@@ -72,6 +72,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
         (SELECT COUNT(*) FROM attendance a3 WHERE a3.guest_id = g.id) as attendance_count
       FROM guests g
       WHERE g.id NOT IN (SELECT guest_id FROM already_invited)
+        AND g.available_days @> ARRAY[$2]::text[]
     )
     SELECT *,
       CASE
@@ -87,7 +88,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
       spark_score DESC NULLS LAST
   `;
 
-  const result = await pool.query(query, [dinnerId]);
+  const result = await pool.query(query, [dinnerId, dinnerDayOfWeek]);
 
   return result.rows.map(row => ({
     id: row.id,
