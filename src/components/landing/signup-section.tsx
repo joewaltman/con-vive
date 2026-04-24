@@ -426,8 +426,8 @@ export function SignupSection({ resumeData }: SignupSectionProps = {}) {
                 className={inputClass}
               >
                 <option value="">Select...</option>
-                <option value="Man">Man</option>
-                <option value="Woman">Woman</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
                 <option value="Non-binary">Non-binary</option>
                 <option value="Prefer not to say">Prefer not to say</option>
               </select>
