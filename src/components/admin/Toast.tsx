@@ -10,9 +10,11 @@ interface ToastProps {
 
 export default function Toast({ message, type, onClose }: ToastProps) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
+    // Errors stay longer so user can read them
+    const duration = type === 'error' ? 15000 : 4000;
+    const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
-  }, [onClose]);
+  }, [onClose, type]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2">
