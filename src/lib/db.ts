@@ -62,6 +62,11 @@ export const pool = new Proxy({} as Pool, {
     if (!p) {
       throw new Error("PostgreSQL: No pool available (DATABASE_URL not set)");
     }
-    return p[prop as keyof Pool];
+    const value = p[prop as keyof Pool];
+    // Bind methods to the pool instance so `this` works correctly
+    if (typeof value === 'function') {
+      return value.bind(p);
+    }
+    return value;
   },
 });
