@@ -68,6 +68,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
   const [customName, setCustomName] = useState<string>('');
   const [useAutoName, setUseAutoName] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [priceInput, setPriceInput] = useState<string>(String(DEFAULT_PRICE_CENTS / 100));
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -184,6 +185,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
       setSelectedHostId('');
       setCustomName('');
       setUseAutoName(true);
+      setPriceInput(String(DEFAULT_PRICE_CENTS / 100));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create dinner');
@@ -208,6 +210,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
       setSelectedHostId('');
       setCustomName('');
       setUseAutoName(true);
+      setPriceInput(String(DEFAULT_PRICE_CENTS / 100));
       setError(null);
       setExpandedSections({ basic: true, booking: false, location: false, menu: false });
     }
@@ -216,7 +219,6 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
   if (!isOpen) return null;
 
   const bringSlots = (fields['Bring Slots'] as BringSlots) || DEFAULT_BRING_SLOTS;
-  const priceDollars = ((fields['Price Cents'] as number) || DEFAULT_PRICE_CENTS) / 100;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -373,12 +375,19 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
                 <input
                   type="text"
                   inputMode="decimal"
-                  value={priceDollars}
+                  value={priceInput}
                   onChange={(e) => {
+                    setPriceInput(e.target.value);
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val)) {
                       handleChange('Price Cents', Math.round(val * 100));
-                    } else if (e.target.value === '') {
+                    }
+                  }}
+                  onBlur={() => {
+                    // On blur, if empty or invalid, reset to default
+                    const val = parseFloat(priceInput);
+                    if (isNaN(val) || priceInput === '') {
+                      setPriceInput(String(DEFAULT_PRICE_CENTS / 100));
                       handleChange('Price Cents', DEFAULT_PRICE_CENTS);
                     }
                   }}

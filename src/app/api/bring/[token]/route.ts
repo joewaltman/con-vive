@@ -17,6 +17,8 @@ interface Dinner {
   dinner_name: string;
   dinner_date: string;
   host: string;
+  host_name: string | null;
+  host_first_name: string | null;
   menu: string | null;
 }
 
@@ -72,7 +74,11 @@ export async function GET(
 
   // Get dinner info
   const dinners = await query<Dinner>(
-    `SELECT id, dinner_name, dinner_date, host, menu FROM dinners WHERE id = $1`,
+    `SELECT d.id, d.dinner_name, d.dinner_date, d.host, d.host_name, d.menu,
+            h.first_name as host_first_name
+     FROM dinners d
+     LEFT JOIN guests h ON h.id = d.host_guest_id
+     WHERE d.id = $1`,
     [invitation.dinner_id]
   );
 
@@ -121,6 +127,9 @@ export async function GET(
     };
   });
 
+  // Get host name with fallbacks
+  const hostName = dinner.host_first_name || dinner.host_name || dinner.host || "Your Host";
+
   return NextResponse.json({
     guest: {
       id: guest.id,
@@ -130,7 +139,7 @@ export async function GET(
       id: dinner.id,
       name: dinner.dinner_name,
       date: dinner.dinner_date,
-      host: dinner.host,
+      host: hostName,
       menu: dinner.menu,
     },
     items,
