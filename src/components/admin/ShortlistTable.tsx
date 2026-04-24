@@ -130,11 +130,11 @@ export default function ShortlistTable({
         </div>
 
         {/* Table */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="border border-gray-200 rounded-lg overflow-x-auto">
+          <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-10 px-3 py-2">
+                <th className="w-10 px-3 py-2 sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === guests.length && guests.length > 0}
@@ -142,21 +142,22 @@ export default function ShortlistTable({
                     className="rounded text-terracotta focus:ring-terracotta"
                   />
                 </th>
-                <th className="text-left px-3 py-2 font-medium text-gray-700">Name</th>
-                <th className="text-left px-2 py-2 font-medium text-gray-700">Gender</th>
-                <th className="text-center px-2 py-2 font-medium text-gray-700 w-12">P</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-700">Solo/Couple</th>
-                <th className="text-center px-2 py-2 font-medium text-gray-700 w-12">{dinnerDayOfWeek}</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-700">Dietary</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-700">Last Attended</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-700 hidden lg:table-cell">Bio</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-700 whitespace-nowrap">Name</th>
+                <th className="text-left px-2 py-2 font-medium text-gray-700 whitespace-nowrap">Gender</th>
+                <th className="text-left px-2 py-2 font-medium text-gray-700 whitespace-nowrap">Age</th>
+                <th className="text-center px-2 py-2 font-medium text-gray-700 w-12 whitespace-nowrap">P</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-700 whitespace-nowrap">Solo/Couple</th>
+                <th className="text-center px-2 py-2 font-medium text-gray-700 w-12 whitespace-nowrap">{dinnerDayOfWeek}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-700 whitespace-nowrap">Dietary</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-700 whitespace-nowrap">Last Attended</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-700 whitespace-nowrap min-w-[300px]">Bio</th>
                 <th className="w-10 px-2 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {guests.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     No eligible guests found
                   </td>
                 </tr>
@@ -169,7 +170,7 @@ export default function ShortlistTable({
                         selectedIds.has(guest.id) ? 'bg-amber-50' : ''
                       }`}
                     >
-                      <td className="px-3 py-2">
+                      <td className={`px-3 py-2 sticky left-0 ${selectedIds.has(guest.id) ? 'bg-amber-50' : 'bg-white'}`}>
                         <input
                           type="checkbox"
                           checked={selectedIds.has(guest.id)}
@@ -177,7 +178,7 @@ export default function ShortlistTable({
                           className="rounded text-terracotta focus:ring-terracotta"
                         />
                       </td>
-                      <td className="px-3 py-2 font-medium text-gray-900">
+                      <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">
                         {guest.firstName} {guest.lastName}
                         {!guest.email && (
                           <span className="ml-1 text-xs text-red-500">(no email)</span>
@@ -186,6 +187,11 @@ export default function ShortlistTable({
                       <td className="px-2 py-2">
                         <span className="text-gray-600">
                           {guest.gender || '--'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className="text-gray-600 text-xs">
+                          {guest.ageRange || '--'}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-center">
@@ -233,7 +239,7 @@ export default function ShortlistTable({
                       <td className="px-3 py-2 text-gray-500 text-xs">
                         {guest.lastAttendedDate || 'Never'}
                       </td>
-                      <td className="px-3 py-2 text-gray-500 text-xs hidden lg:table-cell max-w-xs truncate">
+                      <td className="px-3 py-2 text-gray-500 text-xs min-w-[300px]">
                         {guest.bioSnippet || '--'}
                       </td>
                       <td className="px-2 py-2">
@@ -254,7 +260,7 @@ export default function ShortlistTable({
                     </tr>
                     {expandedId === guest.id && (
                       <tr key={`${guest.id}-expanded`} className="bg-gray-50">
-                        <td colSpan={10} className="px-4 py-3">
+                        <td colSpan={11} className="px-4 py-3">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <span className="font-medium text-gray-700">Email:</span>{' '}

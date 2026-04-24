@@ -242,6 +242,7 @@ export interface ShortlistGuest {
   firstName: string;
   lastName: string;
   gender: string | null;
+  ageRange: string | null;
   priority: number | null;
   sparkScore: number | null;
   soloOrCouple: string | null;
