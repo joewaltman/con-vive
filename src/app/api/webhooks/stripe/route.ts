@@ -7,6 +7,7 @@ import {
   generateOutlookUrl,
 } from "@/lib/calendar";
 import BookingConfirmationEmail from "@/emails/booking-confirmation";
+import HostGuestConfirmedEmail from "@/emails/host-guest-confirmed";
 import Stripe from "stripe";
 
 interface DinnerRow {
@@ -21,6 +22,9 @@ interface DinnerRow {
   host_name: string | null;
   host: string;
   bring_items: Array<{ slot: number; name: string }> | null;
+  host_guest_id: number | null;
+  host_first_name: string | null;
+  host_email: string | null;
 }
 
 interface GuestRow {
@@ -171,10 +175,12 @@ async function handleBookingCheckoutCompleted(
 
   // Get dinner details for confirmation email
   const dinners = await query<DinnerRow>(
-    `SELECT id, dinner_name, dinner_date, dinner_time, address, google_maps_link,
-            parking_instructions, what_to_bring, host_name, host, bring_items
-     FROM dinners
-     WHERE id = $1`,
+    `SELECT d.id, d.dinner_name, d.dinner_date, d.dinner_time, d.address, d.google_maps_link,
+            d.parking_instructions, d.what_to_bring, d.host_name, d.host, d.bring_items,
+            d.host_guest_id, h.first_name as host_first_name, h.email as host_email
+     FROM dinners d
+     LEFT JOIN guests h ON h.id = d.host_guest_id
+     WHERE d.id = $1`,
     [dinnerId]
   );
 
@@ -205,7 +211,7 @@ async function handleBookingCheckoutCompleted(
     timeZone: "UTC",
   });
   const dinnerTime = dinner.dinner_time || "7:00 PM";
-  const hostName = dinner.host_name || dinner.host;
+  const hostName = dinner.host_first_name || dinner.host_name || dinner.host || "Your Host";
 
   // Get bring item assignment if any
   let bringItemAssignment: string | null = null;
@@ -271,5 +277,47 @@ async function handleBookingCheckoutCompleted(
     }
   } catch (emailError) {
     console.error("Error sending confirmation email:", emailError);
+  }
+
+  // Send host notification email
+  if (dinner.host_email) {
+    try {
+      // Get confirmed count and total seats
+      const statsResult = await query<{ confirmed_count: number; total_seats: number }>(
+        `SELECT
+          COUNT(*) FILTER (WHERE status = 'booked') as confirmed_count,
+          COALESCE(d.total_seats, 8) as total_seats
+         FROM invitations i
+         JOIN dinners d ON d.id = i.dinner_id
+         WHERE i.dinner_id = $1
+         GROUP BY d.total_seats`,
+        [dinnerId]
+      );
+
+      const confirmedCount = statsResult?.[0]?.confirmed_count || 1;
+      const totalSeats = statsResult?.[0]?.total_seats || 8;
+
+      const hostEmailResult = await sendEmail({
+        to: dinner.host_email,
+        subject: `${guest.first_name} confirmed for your dinner on ${dinnerDate}`,
+        react: HostGuestConfirmedEmail({
+          hostName,
+          guestName: guest.first_name,
+          guestEmail: guest.email,
+          dinnerDate,
+          dinnerTime,
+          confirmedCount: Number(confirmedCount),
+          totalSeats: Number(totalSeats),
+        }),
+      });
+
+      if (hostEmailResult.success) {
+        console.log("Host notification sent to:", dinner.host_email);
+      } else {
+        console.error("Failed to send host notification:", hostEmailResult.error);
+      }
+    } catch (hostEmailError) {
+      console.error("Error sending host notification:", hostEmailError);
+    }
   }
 }
