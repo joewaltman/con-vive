@@ -10,6 +10,10 @@ const DINNER_ANECDOTES = [
   "At a recent dinner, a data scientist and a dog grooming salon owner who both moved to North County for a fresh start spent the whole evening comparing notes on reinventing yourself.",
   "At my last dinner, a Marine who served in Iraq and a retired political director from AARP ended up finding out they'd both worked on opposite sides of the same policy issue a decade apart.",
   "I hosted a dinner recently where an airline employee who used to grow cannabis in Baja and a retired engineering leader who took up paragliding ended up comparing notes on second acts.",
+  "Last week a venture capitalist and a woman who built and sold a semiconductor company in the 80s spent half the dinner comparing notes on what Silicon Valley used to feel like versus what it is now.",
+  "A retired Navy helicopter pilot and the guy running the last dairy in San Diego ended up deep in conversation about what it actually takes to keep something old and complicated running.",
+  "A medical device engineer who used to ride BMX and a guy who started a nonprofit teaching kids algebra spent a long stretch comparing what it takes to commit to something hard.",
+  "Two psychotherapists at the same table, very different schools of thought, ended up gently arguing about what therapy is actually for.",
 ];
 
 interface Guest {

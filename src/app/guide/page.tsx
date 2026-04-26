@@ -101,6 +101,10 @@ export default function GuidePage() {
           color: #B85C38;
         }
 
+        .guide-section p {
+          margin: 0;
+        }
+
         .guide-signoff {
           font-size: 1.35rem;
           line-height: 1.5;
@@ -147,6 +151,11 @@ export default function GuidePage() {
             <li>Show up between 6:00pm and 6:15pm</li>
             <li>Phones stay in pockets or purses for the evening. If you need to take a call, step outside.</li>
           </ul>
+        </section>
+
+        <section className="guide-section">
+          <h2>Dress Code</h2>
+          <p>We don&apos;t have a strict dress code, but Con-Vive isn&apos;t a beach hang and it isn&apos;t a fancy restaurant. It&apos;s a real dinner, in someone&apos;s home, with people you haven&apos;t met. Most guests land somewhere around nice jeans and a golf shirt or sweater, a casual dress, a linen shirt. You on a good night.</p>
         </section>
 
         <section className="guide-section">
