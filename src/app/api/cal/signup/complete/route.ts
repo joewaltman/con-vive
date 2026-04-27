@@ -112,32 +112,45 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create invitation with checkout_pending status
+    // Create invitation with pending status
     const token = randomBytes(16).toString("hex");
+    const guestIdInt = parseInt(guestId, 10);
 
-    const invitation = await query<{ id: number; token: string }>(
-      `INSERT INTO invitations (
-        dinner_id,
-        guest_id,
-        token,
-        status,
-        bring_item_slot,
-        created_at
-      ) VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (dinner_id, guest_id) DO UPDATE SET
-        token = EXCLUDED.token,
-        status = 'pending',
-        bring_item_slot = EXCLUDED.bring_item_slot,
-        updated_at = NOW()
-      RETURNING id, token`,
-      [
-        dinner.id,
-        parseInt(guestId, 10),
-        token,
-        "pending",
-        bringItemSlot || null,
-      ]
+    // Check if invitation already exists for this dinner/guest
+    const existingInvitation = await query<{ id: number; token: string }>(
+      `SELECT id, token FROM invitations WHERE dinner_id = $1 AND guest_id = $2`,
+      [dinner.id, guestIdInt]
     );
+
+    let invitation: { id: number; token: string }[] | null;
+
+    if (existingInvitation && existingInvitation.length > 0) {
+      // Update existing invitation
+      invitation = await query<{ id: number; token: string }>(
+        `UPDATE invitations SET
+          token = $1,
+          status = 'pending',
+          bring_item_slot = $2,
+          updated_at = NOW()
+        WHERE dinner_id = $3 AND guest_id = $4
+        RETURNING id, token`,
+        [token, bringItemSlot || null, dinner.id, guestIdInt]
+      );
+    } else {
+      // Create new invitation
+      invitation = await query<{ id: number; token: string }>(
+        `INSERT INTO invitations (
+          dinner_id,
+          guest_id,
+          token,
+          status,
+          bring_item_slot,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING id, token`,
+        [dinner.id, guestIdInt, token, "pending", bringItemSlot || null]
+      );
+    }
 
     if (!invitation || invitation.length === 0) {
       return NextResponse.json(
