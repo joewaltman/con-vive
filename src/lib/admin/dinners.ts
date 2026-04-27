@@ -268,6 +268,22 @@ export async function updateDinner(id: string, fields: Partial<DinnerFields>): P
       values.push(value);
     }
     paramIndex++;
+
+    // Keep dinner_time in sync with start_time
+    if (fieldName === 'Start Time' && typeof value === 'string') {
+      const timeParts = value.match(/^(\d{1,2}):(\d{2})/);
+      if (timeParts) {
+        let hours = parseInt(timeParts[1], 10);
+        const minutes = timeParts[2];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        if (hours > 12) hours -= 12;
+        if (hours === 0) hours = 12;
+        const formattedTime = `${hours}:${minutes} ${ampm}`;
+        setClauses.push(`dinner_time = $${paramIndex}`);
+        values.push(formattedTime);
+        paramIndex++;
+      }
+    }
   }
 
   if (setClauses.length === 0) {
