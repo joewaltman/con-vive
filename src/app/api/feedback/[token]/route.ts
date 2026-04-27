@@ -15,6 +15,8 @@ interface DinnerRow {
   id: number;
   dinner_name: string;
   dinner_date: Date | string;
+  host_first_name: string | null;
+  host_name: string | null;
 }
 
 interface AttendeeRow {
@@ -61,11 +63,13 @@ export async function GET(
       );
     }
 
-    // Fetch dinner info
+    // Fetch dinner info with host
     const dinnerResult = await pool.query<DinnerRow>(`
-      SELECT id, dinner_name, dinner_date
-      FROM dinners
-      WHERE id = $1
+      SELECT d.id, d.dinner_name, d.dinner_date, d.host_name,
+             h.first_name as host_first_name
+      FROM dinners d
+      LEFT JOIN hosts h ON h.id = d.host_id
+      WHERE d.id = $1
     `, [feedbackToken.dinner_id]);
 
     if (dinnerResult.rows.length === 0) {
@@ -78,14 +82,14 @@ export async function GET(
     const dinner = dinnerResult.rows[0];
 
     // Fetch other attendees (excluding the rater)
+    // Checks both status='booked' (new) and response='Accepted' (legacy)
     const attendeesResult = await pool.query<AttendeeRow>(`
       SELECT DISTINCT g.id, g.first_name
-      FROM attendance a
-      JOIN invitations i ON i.id = a.invitation_id
+      FROM invitations i
       JOIN guests g ON g.id = i.guest_id
+      LEFT JOIN attendance a ON a.invitation_id = i.id
       WHERE i.dinner_id = $1
-        AND i.status = 'booked'
-        AND (a.attended = TRUE OR a.attended IS NULL)
+        AND (i.status = 'booked' OR i.response = 'Accepted')
         AND (a.no_show IS NULL OR a.no_show = FALSE)
         AND g.id != $2
       ORDER BY g.first_name
@@ -118,8 +122,12 @@ export async function GET(
 
     const formattedDate = format(dinnerDate, 'EEEE, MMMM d');
 
+    // Use host's first name if available, otherwise fall back to dinner_name
+    const hostName = dinner.host_first_name || dinner.host_name || dinner.dinner_name;
+    const displayName = `${hostName}'s dinner`;
+
     const response: FeedbackPageData = {
-      dinnerName: dinner.dinner_name,
+      dinnerName: displayName,
       dinnerDate: formattedDate,
       attendees,
     };
