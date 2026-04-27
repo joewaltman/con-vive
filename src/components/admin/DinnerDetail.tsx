@@ -10,6 +10,7 @@ import ReminderSection from './ReminderSection';
 import FeedbackSection from './FeedbackSection';
 import DinnerStatusHeader from './DinnerStatusHeader';
 import CancelDinnerModal from './CancelDinnerModal';
+import CalAlumniSection from './CalAlumniSection';
 import type { Dinner, DinnerFields, Host, InvitationResponse } from '@/lib/types/admin';
 
 interface DinnerDetailProps {
@@ -521,6 +522,11 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
           )}
         </div>
       </div>
+
+      {/* Cal Alumni Section (only for cal-alumni signup_source) */}
+      {dinner.fields['signup_source'] === 'cal-alumni' && (
+        <CalAlumniSection dinnerId={dinnerId} />
+      )}
 
       {/* What to Bring */}
       <BringItemSection

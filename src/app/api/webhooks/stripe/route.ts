@@ -7,6 +7,7 @@ import {
   generateOutlookUrl,
 } from "@/lib/calendar";
 import BookingConfirmationEmail from "@/emails/booking-confirmation";
+import CalBookingConfirmationEmail from "@/emails/cal-booking-confirmation";
 import HostGuestConfirmedEmail from "@/emails/host-guest-confirmed";
 import Stripe from "stripe";
 
@@ -19,6 +20,7 @@ interface DinnerRow {
   google_maps_link: string | null;
   parking_instructions: string | null;
   what_to_bring: string | null;
+  menu: string | null;
   host_name: string | null;
   host: string;
   bring_items: Array<{ slot: number; name: string }> | null;
@@ -176,7 +178,7 @@ async function handleBookingCheckoutCompleted(
   // Get dinner details for confirmation email
   const dinners = await query<DinnerRow>(
     `SELECT d.id, d.dinner_name, d.dinner_date, d.dinner_time, d.address, d.google_maps_link,
-            d.parking_instructions, d.what_to_bring, d.host_name, d.host, d.bring_items,
+            d.parking_instructions, d.what_to_bring, d.menu, d.host_name, d.host, d.bring_items,
             d.host_guest_id, h.first_name as host_first_name, h.email as host_email
      FROM dinners d
      LEFT JOIN guests h ON h.id = d.host_guest_id
@@ -245,25 +247,45 @@ async function handleBookingCheckoutCompleted(
 
   // Send confirmation email
   try {
-    const emailResult = await sendEmail({
-      to: guest.email,
-      subject: `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`,
-      react: BookingConfirmationEmail({
-        guestName: guest.first_name,
-        dinnerDate,
-        dinnerTime,
-        hostName,
-        address: dinner.address || "Address will be sent separately",
-        googleMapsLink: dinner.google_maps_link,
-        parkingInstructions: dinner.parking_instructions,
-        whatToBring: dinner.what_to_bring,
-        bringItemAssignment,
-        bringItemsUrl,
-        googleCalendarUrl,
-        outlookCalendarUrl,
-        icsDownloadUrl,
-      }),
-    });
+    const isCalAlumni = session.metadata?.signup_source === "cal-alumni";
+
+    const emailResult = isCalAlumni
+      ? await sendEmail({
+          to: guest.email,
+          subject: `You're confirmed for the Cal Alumni dinner - ${dinnerDate}`,
+          react: CalBookingConfirmationEmail({
+            guestName: guest.first_name,
+            dinnerDate,
+            dinnerTime,
+            address: dinner.address || "Address will be sent separately",
+            googleMapsLink: dinner.google_maps_link,
+            parkingInstructions: dinner.parking_instructions,
+            menu: dinner.menu,
+            bringItemAssignment,
+            googleCalendarUrl,
+            outlookCalendarUrl,
+            icsDownloadUrl,
+          }),
+        })
+      : await sendEmail({
+          to: guest.email,
+          subject: `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`,
+          react: BookingConfirmationEmail({
+            guestName: guest.first_name,
+            dinnerDate,
+            dinnerTime,
+            hostName,
+            address: dinner.address || "Address will be sent separately",
+            googleMapsLink: dinner.google_maps_link,
+            parkingInstructions: dinner.parking_instructions,
+            whatToBring: dinner.what_to_bring,
+            bringItemAssignment,
+            bringItemsUrl,
+            googleCalendarUrl,
+            outlookCalendarUrl,
+            icsDownloadUrl,
+          }),
+        });
 
     if (emailResult.success) {
       // Update confirmation_email_sent_at

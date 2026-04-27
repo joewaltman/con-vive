@@ -86,3 +86,27 @@ export interface FeedbackPageData {
   dinnerDate: string;
   attendees: FeedbackAttendee[];
 }
+
+// Cal Alumni signup types
+export interface CalAlumniSignupData {
+  graduation_year: number;
+  major: string;
+}
+
+export interface CalSignupPage1 {
+  firstName: string;
+  lastName: string;
+  email: string;
+  graduationYear: number;
+  major: string;
+}
+
+export interface CalSignupPage2 {
+  phone: string;
+  gender: string;
+  zipCode: string;
+  dietaryRestrictions: string[];
+  dietaryNotes?: string;
+  availableDays: string[];
+  bringItemSlot?: number;
+}

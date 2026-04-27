@@ -5,8 +5,18 @@ const MIN_GENDER_THRESHOLD = 2;
 export function checkGenderConstraint(
   genderCounts: GenderCounts,
   guestGender: string | null,
-  capacity: number = 6
+  capacity: number = 6,
+  enforceGenderBalance: boolean = true
 ): BookingConstraintResult {
+  // If gender balance is disabled, only check capacity
+  if (!enforceGenderBalance) {
+    const total = genderCounts.male + genderCounts.female + genderCounts.other;
+    if (total >= capacity) {
+      return { allowed: false, reason: "This dinner is fully booked." };
+    }
+    return { allowed: true, reason: null };
+  }
+
   // If guest has no gender set, they can't book yet
   if (!guestGender) {
     return {

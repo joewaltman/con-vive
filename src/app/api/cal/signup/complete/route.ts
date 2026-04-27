@@ -1,0 +1,165 @@
+import { NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { getCalDinner, getRemainingSeats } from "@/lib/cal-dinner";
+import { randomBytes } from "crypto";
+
+function sanitizePhone(value: string): string {
+  let digits = value.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+  return digits;
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    const {
+      guestId,
+      phone,
+      gender,
+      zipCode,
+      dietaryRestrictions,
+      dietaryNotes,
+      availableDays,
+      bringItemSlot,
+    } = body;
+
+    if (!guestId) {
+      return NextResponse.json(
+        { error: "Missing guestId" },
+        { status: 400 }
+      );
+    }
+
+    // Validate phone
+    const cleanPhone = sanitizePhone(phone || "");
+    if (cleanPhone.length !== 10) {
+      return NextResponse.json(
+        { error: "Please enter a valid 10-digit US phone number" },
+        { status: 400 }
+      );
+    }
+
+    // Validate gender
+    const validGenders = ["Male", "Female", "Non-binary", "Prefer not to say"];
+    if (!gender || !validGenders.includes(gender)) {
+      return NextResponse.json(
+        { error: "Please select a valid gender" },
+        { status: 400 }
+      );
+    }
+
+    // Get Cal dinner
+    const dinner = await getCalDinner();
+    if (!dinner) {
+      return NextResponse.json(
+        { error: "Cal Alumni dinner not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check seats available
+    const remainingSeats = await getRemainingSeats(dinner.id);
+    if (remainingSeats <= 0) {
+      return NextResponse.json(
+        { error: "This dinner is now full. Please join the waitlist." },
+        { status: 400 }
+      );
+    }
+
+    // Format dietary restrictions
+    const dietaryArray = Array.isArray(dietaryRestrictions)
+      ? dietaryRestrictions
+      : [];
+    let dietaryNotesStr = dietaryArray.filter((d: string) => d !== "None").join(", ");
+    if (dietaryNotes && dietaryNotes.trim()) {
+      dietaryNotesStr = dietaryNotesStr
+        ? `${dietaryNotesStr}. ${dietaryNotes.trim()}`
+        : dietaryNotes.trim();
+    }
+
+    // Format available days
+    const daysArray = Array.isArray(availableDays) ? availableDays : [];
+
+    // Update guest record
+    const guestUpdate = await query(
+      `UPDATE guests SET
+        phone = $1,
+        phone_clean = $1,
+        gender = $2,
+        zip_code = $3,
+        dietary_notes = $4,
+        available_days = $5,
+        updated_at = NOW()
+      WHERE id = $6
+      RETURNING id`,
+      [
+        cleanPhone,
+        gender,
+        zipCode || null,
+        dietaryNotesStr || null,
+        daysArray.length > 0 ? daysArray : null,
+        parseInt(guestId, 10),
+      ]
+    );
+
+    if (!guestUpdate || guestUpdate.length === 0) {
+      return NextResponse.json(
+        { error: "Guest not found" },
+        { status: 404 }
+      );
+    }
+
+    // Create invitation with checkout_pending status
+    const token = randomBytes(16).toString("hex");
+
+    const invitation = await query<{ id: number; token: string }>(
+      `INSERT INTO invitations (
+        dinner_id,
+        guest_id,
+        token,
+        status,
+        bring_item_slot,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW())
+      ON CONFLICT (dinner_id, guest_id) DO UPDATE SET
+        token = EXCLUDED.token,
+        status = 'pending',
+        bring_item_slot = EXCLUDED.bring_item_slot,
+        updated_at = NOW()
+      RETURNING id, token`,
+      [
+        dinner.id,
+        parseInt(guestId, 10),
+        token,
+        "pending",
+        bringItemSlot || null,
+      ]
+    );
+
+    if (!invitation || invitation.length === 0) {
+      return NextResponse.json(
+        { error: "Failed to create invitation" },
+        { status: 500 }
+      );
+    }
+
+    console.log(
+      `[Cal Signup] Created invitation ${invitation[0].id} for guest ${guestId}`
+    );
+
+    return NextResponse.json({
+      success: true,
+      invitationId: invitation[0].id.toString(),
+      token: invitation[0].token,
+    });
+  } catch (error) {
+    console.error("Cal signup complete error:", error);
+    return NextResponse.json(
+      { error: "Failed to complete signup" },
+      { status: 500 }
+    );
+  }
+}

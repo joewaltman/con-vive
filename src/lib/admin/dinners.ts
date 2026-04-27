@@ -31,6 +31,9 @@ function rowToDinner(row: Record<string, unknown>): Dinner {
   if (row.vibe_descriptor != null) fields['Vibe Descriptor'] = String(row.vibe_descriptor);
   if (row.host_guest_id != null) fields['Host Guest ID'] = Number(row.host_guest_id);
   if (row.status != null) fields['Status'] = row.status as DinnerStatus;
+  // Cal Alumni fields
+  if (row.signup_source != null) fields['signup_source'] = String(row.signup_source);
+  if (row.enforce_gender_balance != null) fields['enforce_gender_balance'] = Boolean(row.enforce_gender_balance);
 
   const dinner: Dinner = {
     id: String(row.id),
@@ -98,6 +101,9 @@ const fieldToColumn: Record<string, string> = {
   'Vibe Descriptor': 'vibe_descriptor',
   'Host Guest ID': 'host_guest_id',
   'Status': 'status',
+  // Cal Alumni fields
+  'signup_source': 'signup_source',
+  'enforce_gender_balance': 'enforce_gender_balance',
 };
 
 const DINNER_QUERY = `

@@ -148,6 +148,9 @@ export interface DinnerFields {
   'Vibe Descriptor'?: string;
   'Host Guest ID'?: number | null;
   'Status'?: DinnerStatus;
+  // Cal Alumni fields
+  'signup_source'?: string;
+  'enforce_gender_balance'?: boolean;
 }
 
 export interface Dinner {
