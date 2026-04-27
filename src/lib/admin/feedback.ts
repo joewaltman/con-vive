@@ -34,16 +34,16 @@ interface CommentRow {
 
 /**
  * Get confirmed attendees for a dinner (for feedback generation)
+ * Checks both new booking system (status='booked') and legacy (response='Accepted')
  */
 async function getConfirmedAttendees(dinnerId: number): Promise<GuestRow[]> {
   const result = await pool.query<GuestRow>(`
     SELECT DISTINCT g.id, g.first_name, g.last_name, g.phone_clean
-    FROM attendance a
-    JOIN invitations i ON i.id = a.invitation_id
+    FROM invitations i
     JOIN guests g ON g.id = i.guest_id
+    LEFT JOIN attendance a ON a.invitation_id = i.id
     WHERE i.dinner_id = $1
-      AND i.status = 'booked'
-      AND (a.attended = TRUE OR a.attended IS NULL)
+      AND (i.status = 'booked' OR i.response = 'Accepted')
       AND (a.no_show IS NULL OR a.no_show = FALSE)
   `, [dinnerId]);
 
