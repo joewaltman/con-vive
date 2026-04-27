@@ -254,3 +254,32 @@ export interface ShortlistGuest {
   lastInvitedDate: string | null;
   bioSnippet: string | null;
 }
+
+// Feedback types
+export interface FeedbackToken {
+  id: number;
+  token: string;
+  guest: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  };
+  completedAt: string | null;
+}
+
+export interface FeedbackAggregate {
+  guestId: number;
+  firstName: string;
+  lastInitial: string;
+  yesCount: number;
+  noCount: number;
+  notSureCount: number;
+}
+
+export interface FeedbackResults {
+  totalTokens: number;
+  completedCount: number;
+  aggregates: FeedbackAggregate[];
+  comments: string[];
+}

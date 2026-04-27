@@ -64,3 +64,25 @@ export interface BookingConstraintResult {
   allowed: boolean;
   reason: string | null;
 }
+
+// Feedback types
+export interface FeedbackRating {
+  rateeGuestId: number;
+  rating: 'yes' | 'no' | 'not_sure';
+}
+
+export interface FeedbackSubmission {
+  ratings: FeedbackRating[];
+  comment?: string;
+}
+
+export interface FeedbackAttendee {
+  id: number;
+  firstName: string;
+}
+
+export interface FeedbackPageData {
+  dinnerName: string;
+  dinnerDate: string;
+  attendees: FeedbackAttendee[];
+}

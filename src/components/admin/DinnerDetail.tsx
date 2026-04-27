@@ -7,6 +7,7 @@ import useSWR, { mutate } from 'swr';
 import InvitationRow from './InvitationRow';
 import BringItemSection from './BringItemSection';
 import ReminderSection from './ReminderSection';
+import FeedbackSection from './FeedbackSection';
 import DinnerStatusHeader from './DinnerStatusHeader';
 import CancelDinnerModal from './CancelDinnerModal';
 import type { Dinner, DinnerFields, Host, InvitationResponse } from '@/lib/types/admin';
@@ -533,6 +534,14 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
         dinnerId={dinnerId}
         hasAcceptedGuests={hasAcceptedGuests}
       />
+
+      {/* Post-Dinner Feedback */}
+      {dinner.fields['Dinner Date'] && (
+        <FeedbackSection
+          dinnerId={dinnerId}
+          dinnerDate={dinner.fields['Dinner Date']}
+        />
+      )}
 
       {/* Delete Dinner */}
       <div className="border-t border-gray-200 pt-6 mt-8">

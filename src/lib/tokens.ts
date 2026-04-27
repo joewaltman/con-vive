@@ -7,3 +7,7 @@ export function generateBringToken(): string {
 export function generateBookingToken(): string {
   return randomBytes(12).toString("base64url").slice(0, 16);
 }
+
+export function generateFeedbackToken(): string {
+  return randomBytes(16).toString("base64url").slice(0, 22);
+}
