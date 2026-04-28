@@ -112,7 +112,7 @@ const DINNER_QUERY = `
     h.last_name as host_last_name,
     h.address as host_address,
     h.city as host_city,
-    (SELECT COUNT(*) FROM attendance a WHERE a.dinner_id = d.id) as confirmed_count
+    (SELECT COUNT(*) FROM invitations i WHERE i.dinner_id = d.id AND (i.status = 'booked' OR i.response = 'Accepted')) as confirmed_count
   FROM dinners d
   LEFT JOIN hosts h ON h.id = d.host_id
 `;
