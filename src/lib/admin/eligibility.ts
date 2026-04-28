@@ -79,6 +79,7 @@ export async function fetchEligibleGuests(options: EligibilityOptions): Promise<
       FROM guests g
       WHERE g.id NOT IN (SELECT guest_id FROM already_invited)
         AND g.available_days @> ARRAY[$2]::text[]
+        AND NOT (g.on_hiatus = true AND g.hiatus_until > CURRENT_DATE)
         ${dietaryClause}
     )
     SELECT *,

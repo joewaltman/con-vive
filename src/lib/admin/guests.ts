@@ -41,6 +41,8 @@ function rowToGuest(row: Record<string, unknown>): Guest {
   if (row.sequence_completed != null) fields['Sequence Completed'] = Boolean(row.sequence_completed);
   if (row.social_summary != null) fields['Social Summary'] = row.social_summary as GuestFields['Social Summary'];
   if (row.attention_archived_at != null) fields['Attention Archived At'] = new Date(row.attention_archived_at as string).toISOString();
+  if (row.on_hiatus != null) fields['On Hiatus'] = Boolean(row.on_hiatus);
+  if (row.hiatus_until != null) fields['Hiatus Until'] = new Date(row.hiatus_until as string).toISOString().split('T')[0];
 
   return {
     id: String(row.id),
@@ -80,6 +82,8 @@ const fieldToColumn: Record<string, string> = {
   'Sequence Completed': 'sequence_completed',
   'Social Summary': 'social_summary',
   'Attention Archived At': 'attention_archived_at',
+  'On Hiatus': 'on_hiatus',
+  'Hiatus Until': 'hiatus_until',
 };
 
 export async function fetchAllGuests(): Promise<Guest[]> {

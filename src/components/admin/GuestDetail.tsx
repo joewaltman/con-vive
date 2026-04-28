@@ -225,6 +225,50 @@ export default function GuestDetail({ guest, onSave, onBack, showBackButton }: G
           </Field>
         </Section>
 
+        {/* Hiatus Section */}
+        <Section title="Hiatus">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={getValue('On Hiatus') as boolean || false}
+                    onChange={(e) => {
+                      handleChange('On Hiatus', e.target.checked);
+                      if (!e.target.checked) {
+                        handleChange('Hiatus Until', null);
+                      }
+                    }}
+                    className={`rounded border-gray-300 text-terracotta focus:ring-terracotta ${isModified('On Hiatus') ? 'border-amber-400' : ''}`}
+                  />
+                  <span className="text-sm font-medium text-gray-700">On Hiatus</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  Guest will not appear in invite lists while on hiatus
+                </p>
+              </div>
+            </div>
+            {(getValue('On Hiatus') as boolean) && (
+              <div className="mt-3 ml-6">
+                <Field label="Reactivate On">
+                  <input
+                    type="date"
+                    value={getValue('Hiatus Until') as string || ''}
+                    onChange={(e) => handleChange('Hiatus Until', e.target.value || null)}
+                    className={inputClass('Hiatus Until')}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </Field>
+                <p className="text-xs text-gray-500 mt-1">
+                  Guest will automatically become eligible again after this date
+                </p>
+              </div>
+            )}
+          </div>
+        </Section>
+
         {/* Guest Profile Section */}
         <Section title="Guest Profile">
           <Field label="Curious About">

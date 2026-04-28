@@ -45,6 +45,10 @@ export interface GuestFields {
   'M2 Variant'?: string | null;
   'M3 Variant'?: string | null;
 
+  // Hiatus
+  'On Hiatus'?: boolean;
+  'Hiatus Until'?: string | null;
+
   // Social Enrichment
   'Social Summary'?: {
     inferred_role: string;
