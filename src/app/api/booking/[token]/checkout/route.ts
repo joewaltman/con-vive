@@ -11,6 +11,9 @@ interface InvitationRow {
   guest_id: number;
   dinner_id: number;
   status: string;
+  booked_at: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
 }
 
 interface GuestRow {
@@ -56,7 +59,8 @@ export async function POST(
 
   // Find invitation by token
   const invitations = await query<InvitationRow>(
-    `SELECT id, guest_id, dinner_id, status
+    `SELECT id, guest_id, dinner_id, status, booked_at,
+            stripe_checkout_session_id, stripe_payment_intent_id
      FROM invitations
      WHERE token = $1`,
     [token]
@@ -71,12 +75,53 @@ export async function POST(
 
   const invitation = invitations[0];
 
-  // Check if already booked
-  if (invitation.status === "booked") {
+  // Check if already booked (check both status and booked_at for safety)
+  if (invitation.status === "booked" || invitation.booked_at) {
     return NextResponse.json(
-      { error: "You have already booked this dinner" },
+      { error: "You have already booked this dinner", alreadyBooked: true },
       { status: 400 }
     );
+  }
+
+  // Check if there's an existing active Stripe session we can reuse
+  if (invitation.stripe_checkout_session_id) {
+    try {
+      const existingSession = await stripe.checkout.sessions.retrieve(
+        invitation.stripe_checkout_session_id
+      );
+
+      // If session is still open and has at least 60 seconds left, reuse it
+      const hasTimeLeft = existingSession.expires_at * 1000 > Date.now() + 60000;
+      if (existingSession.status === "open" && hasTimeLeft) {
+        console.log(`[Checkout] Reusing existing session ${existingSession.id} for invitation ${invitation.id}`);
+        return NextResponse.json({ url: existingSession.url, reused: true });
+      }
+
+      // If session is complete and paid, the webhook may have been missed - reconcile
+      if (existingSession.status === "complete" && existingSession.payment_status === "paid") {
+        console.log(`[Checkout] Found completed session ${existingSession.id}, reconciling invitation ${invitation.id}`);
+        await query(
+          `UPDATE invitations
+           SET status = 'booked',
+               booked_at = NOW(),
+               response = 'Accepted',
+               confirmed_at = NOW(),
+               stripe_payment_intent_id = $1,
+               payment_intent_id = $1,
+               price_paid_cents = $2,
+               updated_at = NOW()
+           WHERE id = $3`,
+          [existingSession.payment_intent, existingSession.amount_total, invitation.id]
+        );
+        return NextResponse.json(
+          { error: "You have already booked this dinner", alreadyBooked: true, reconciled: true },
+          { status: 400 }
+        );
+      }
+    } catch (error) {
+      // Session retrieval failed (expired, invalid, etc.) - proceed to create new one
+      console.log(`[Checkout] Could not retrieve existing session, will create new: ${error}`);
+    }
   }
 
   // Get guest info
@@ -169,17 +214,28 @@ export async function POST(
       },
     });
 
-    // Update invitation with checkout session ID
+    // Update invitation with checkout session ID and append to attempts array
     await query(
       `UPDATE invitations
        SET stripe_checkout_session_id = $1,
            bring_item_slot = $2,
+           stripe_checkout_attempts = COALESCE(stripe_checkout_attempts, '[]'::jsonb) || $4::jsonb,
            updated_at = NOW()
        WHERE id = $3`,
-      [session.id, bringItemSlot, invitation.id]
+      [
+        session.id,
+        bringItemSlot,
+        invitation.id,
+        JSON.stringify({
+          session_id: session.id,
+          created_at: new Date().toISOString(),
+          amount_cents: dinner.price_cents,
+        }),
+      ]
     );
 
-    return NextResponse.json({ url: session.url });
+    console.log(`[Checkout] Created new session ${session.id} for invitation ${invitation.id}`);
+    return NextResponse.json({ url: session.url, created: true });
   } catch (error) {
     console.error("Failed to create checkout session:", error);
     return NextResponse.json(

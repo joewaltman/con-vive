@@ -39,6 +39,14 @@ interface InvitationRow {
   bring_item_slot: number | null;
 }
 
+interface InvitationMatchRow {
+  id: number;
+  status: string | null;
+  booked_at: string | null;
+  stripe_payment_intent_id: string | null;
+  token: string | null;
+}
+
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -142,18 +150,86 @@ export async function POST(request: Request) {
 async function handleBookingCheckoutCompleted(
   session: Stripe.Checkout.Session
 ) {
-  const invitationId = session.metadata?.invitation_id;
+  const invitationIdFromMeta = session.metadata?.invitation_id;
   const guestId = session.metadata?.guest_id;
   const dinnerId = session.metadata?.dinner_id;
   const token = session.metadata?.token;
 
-  if (!invitationId || !guestId || !dinnerId) {
+  if (!invitationIdFromMeta || !guestId || !dinnerId) {
     console.error("Missing booking metadata in checkout session:", session.id);
+    await logOrphanWebhook(session, "missing_metadata");
+    return;
+  }
+
+  // Try to find the invitation - multiple fallback strategies
+  let invitation: InvitationMatchRow | null = null;
+  let matchStrategy = "primary";
+
+  // Strategy 1: Match by current stripe_checkout_session_id
+  const primaryMatch = await query<InvitationMatchRow>(
+    `SELECT id, status, booked_at, stripe_payment_intent_id, token
+     FROM invitations
+     WHERE stripe_checkout_session_id = $1`,
+    [session.id]
+  );
+  if (primaryMatch?.length) {
+    invitation = primaryMatch[0];
+    matchStrategy = "session_id";
+  }
+
+  // Strategy 2: Match by session ID in stripe_checkout_attempts JSONB
+  if (!invitation) {
+    const attemptsMatch = await query<InvitationMatchRow>(
+      `SELECT id, status, booked_at, stripe_payment_intent_id, token
+       FROM invitations
+       WHERE stripe_checkout_attempts @> $1::jsonb`,
+      [JSON.stringify([{ session_id: session.id }])]
+    );
+    if (attemptsMatch?.length) {
+      invitation = attemptsMatch[0];
+      matchStrategy = "checkout_attempts";
+      console.log(`[Webhook] Found invitation via checkout_attempts for session ${session.id}`);
+    }
+  }
+
+  // Strategy 3: Match by invitation_id from metadata (fallback)
+  if (!invitation) {
+    const metaMatch = await query<InvitationMatchRow>(
+      `SELECT id, status, booked_at, stripe_payment_intent_id, token
+       FROM invitations
+       WHERE id = $1`,
+      [invitationIdFromMeta]
+    );
+    if (metaMatch?.length) {
+      invitation = metaMatch[0];
+      matchStrategy = "metadata_id";
+      console.log(`[Webhook] Found invitation via metadata ID for session ${session.id}`);
+    }
+  }
+
+  if (!invitation) {
+    console.error(`[Webhook] Could not find invitation for session ${session.id}`);
+    await logOrphanWebhook(session, "no_invitation_match");
+    return;
+  }
+
+  const invitationId = invitation.id;
+  const effectiveToken = invitation.token || token;
+
+  // Idempotency check: if already booked with same payment intent, skip
+  if (invitation.booked_at && invitation.stripe_payment_intent_id === session.payment_intent) {
+    console.log(`[Webhook] Idempotent: invitation ${invitationId} already booked with same PI, skipping`);
+    return;
+  }
+
+  // If already booked with DIFFERENT payment intent, this is a problem - log orphan
+  if (invitation.booked_at && invitation.stripe_payment_intent_id !== session.payment_intent) {
+    console.error(`[Webhook] DOUBLE CHARGE DETECTED: invitation ${invitationId} already booked with different PI`);
+    await logOrphanWebhook(session, "already_booked_different_pi");
     return;
   }
 
   // Update invitation to booked status
-  // Also set response/confirmed_at for dashboard compatibility
   const updateResult = await query(
     `UPDATE invitations
      SET status = 'booked',
@@ -164,7 +240,7 @@ async function handleBookingCheckoutCompleted(
          payment_intent_id = $1,
          price_paid_cents = $3,
          updated_at = NOW()
-     WHERE id = $2`,
+     WHERE id = $2 AND booked_at IS NULL`,
     [session.payment_intent, invitationId, session.amount_total]
   );
 
@@ -173,7 +249,7 @@ async function handleBookingCheckoutCompleted(
     return;
   }
 
-  console.log("Booking confirmed for invitation:", invitationId);
+  console.log(`[Webhook] Booking confirmed for invitation ${invitationId} via ${matchStrategy}`);
 
   // Get dinner details for confirmation email
   const dinners = await query<DinnerRow>(
@@ -191,7 +267,7 @@ async function handleBookingCheckoutCompleted(
     [guestId]
   );
 
-  const invitations = await query<InvitationRow>(
+  const invitationDetails = await query<InvitationRow>(
     `SELECT bring_item_slot FROM invitations WHERE id = $1`,
     [invitationId]
   );
@@ -203,7 +279,7 @@ async function handleBookingCheckoutCompleted(
 
   const dinner = dinners[0];
   const guest = guests[0];
-  const invitation = invitations?.[0];
+  const invDetail = invitationDetails?.[0];
 
   // Format date and time
   const dinnerDate = new Date(dinner.dinner_date).toLocaleDateString("en-US", {
@@ -217,16 +293,16 @@ async function handleBookingCheckoutCompleted(
 
   // Get bring item assignment if any
   let bringItemAssignment: string | null = null;
-  if (invitation?.bring_item_slot && Array.isArray(dinner.bring_items)) {
+  if (invDetail?.bring_item_slot && Array.isArray(dinner.bring_items)) {
     const item = dinner.bring_items.find(
-      (i) => i.slot === invitation.bring_item_slot
+      (i) => i.slot === invDetail.bring_item_slot
     );
     bringItemAssignment = item?.name || null;
   }
 
   const baseUrl = getBaseUrl();
-  const icsDownloadUrl = `${baseUrl}/api/calendar/${token}`;
-  const bringItemsUrl = `${baseUrl}/bring/${token}`;
+  const icsDownloadUrl = `${baseUrl}/api/calendar/${effectiveToken}`;
+  const bringItemsUrl = `${baseUrl}/bring/${effectiveToken}`;
 
   // Generate calendar URLs
   // Convert date to string if it's a Date object
@@ -341,5 +417,41 @@ async function handleBookingCheckoutCompleted(
     } catch (hostEmailError) {
       console.error("Error sending host notification:", hostEmailError);
     }
+  }
+}
+
+async function logOrphanWebhook(
+  session: Stripe.Checkout.Session,
+  reason: string
+): Promise<void> {
+  try {
+    await query(
+      `INSERT INTO webhook_orphans (
+        stripe_session_id,
+        stripe_payment_intent_id,
+        customer_email,
+        amount_cents,
+        metadata,
+        raw_event,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [
+        session.id,
+        session.payment_intent,
+        session.customer_email || session.customer_details?.email,
+        session.amount_total,
+        JSON.stringify({ ...session.metadata, orphan_reason: reason }),
+        JSON.stringify({
+          id: session.id,
+          payment_intent: session.payment_intent,
+          amount_total: session.amount_total,
+          customer_email: session.customer_email,
+          metadata: session.metadata,
+        }),
+      ]
+    );
+    console.log(`[Webhook] Logged orphan webhook: session=${session.id}, reason=${reason}`);
+  } catch (error) {
+    console.error("[Webhook] Failed to log orphan webhook:", error);
   }
 }
