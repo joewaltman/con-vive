@@ -12,6 +12,7 @@ export async function GET() {
         h.address,
         h.city,
         h.active,
+        h.guest_id,
         (SELECT COUNT(*) FROM dinners d WHERE d.host_id = h.id) as dinner_count
       FROM hosts h
       WHERE h.active = true
@@ -24,6 +25,7 @@ export async function GET() {
       lastName: row.last_name || '',
       address: row.address || null,
       city: row.city || null,
+      guestId: row.guest_id ? parseInt(row.guest_id) : null,
       dinnerCount: parseInt(row.dinner_count) || 0,
     }));
 

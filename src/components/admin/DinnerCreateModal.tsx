@@ -44,6 +44,7 @@ interface HostCandidate {
   lastName: string;
   address: string | null;
   city: string | null;
+  guestId: number | null;
   dinnerCount: number;
 }
 
@@ -138,23 +139,33 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
   const handleHostChange = useCallback((hostId: string) => {
     setSelectedHostId(hostId);
     if (hostId) {
+      const host = hostCandidates?.find(h => String(h.id) === hostId);
       setFields(prev => ({
         ...prev,
         'Host ID': parseInt(hostId),
+        'Host': host?.firstName || '',
+        'Host Guest ID': host?.guestId || undefined,
       }));
     } else {
       setFields(prev => {
-        const { 'Host ID': _unused, ...rest } = prev;
+        const { 'Host ID': _unused, 'Host': _unused2, 'Host Guest ID': _unused3, ...rest } = prev;
         void _unused;
+        void _unused2;
+        void _unused3;
         return rest;
       });
     }
     setError(null);
-  }, []);
+  }, [hostCandidates]);
 
   const handleSubmit = useCallback(async (status: DinnerStatus) => {
     if (!fields['Dinner Date']) {
       setError('Dinner date is required');
+      return;
+    }
+
+    if (!selectedHostId) {
+      setError('Host is required');
       return;
     }
 
@@ -192,7 +203,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     } finally {
       setIsCreating(false);
     }
-  }, [fields, useAutoName, autoName, customName, onCreate, onClose]);
+  }, [fields, selectedHostId, useAutoName, autoName, customName, onCreate, onClose]);
 
   // Reset form when modal opens
   useEffect(() => {

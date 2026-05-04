@@ -165,7 +165,7 @@ async function main() {
     let errorCount = 0;
 
     for (const invitation of invitations) {
-      const hostName = invitation.host_name || invitation.host;
+      const hostName = invitation.host_name || invitation.host || 'your host';
       const dinnerDate = formatDate(invitation.dinner_date);
 
       console.log(

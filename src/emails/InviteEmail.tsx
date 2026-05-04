@@ -33,6 +33,7 @@ export default function InviteEmail({
   priceDollars,
   magicLink,
 }: InviteEmailProps) {
+  const safeHostFirstName = hostFirstName || 'your host';
   const previewText = `You're invited to a Con-Vive dinner on ${dinnerDate}`;
 
   return (
@@ -58,7 +59,7 @@ export default function InviteEmail({
               <strong>When:</strong> {dinnerDate} at {dinnerTime}
             </Text>
             <Text style={detailsText}>
-              <strong>Host:</strong> {hostFirstName}
+              <strong>Host:</strong> {safeHostFirstName}
             </Text>
             <Text style={detailsText}>
               <strong>Menu:</strong> {menu}

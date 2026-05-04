@@ -34,16 +34,18 @@ export default function DinnerReminderEmail({
   whatToBring,
   bringItemAssignment,
 }: DinnerReminderEmailProps) {
+  const safeHostName = hostName || 'your host';
+
   return (
     <Html>
       <Head />
-      <Preview>Reminder: {hostName}&apos;s dinner is coming up!</Preview>
+      <Preview>Reminder: {safeHostName}&apos;s dinner is coming up!</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>See You Soon, {guestName}!</Heading>
 
           <Text style={text}>
-            Just a friendly reminder that {hostName}&apos;s Con-Vive dinner is
+            Just a friendly reminder that {safeHostName}&apos;s Con-Vive dinner is
             coming up. Here&apos;s everything you need to know:
           </Text>
 
@@ -54,7 +56,7 @@ export default function DinnerReminderEmail({
               <br />
               <strong>Time:</strong> {dinnerTime}
               <br />
-              <strong>Host:</strong> {hostName}
+              <strong>Host:</strong> {safeHostName}
             </Text>
           </Section>
 

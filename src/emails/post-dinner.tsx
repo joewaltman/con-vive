@@ -22,16 +22,18 @@ export default function PostDinnerEmail({
   hostName,
   dinnerDate,
 }: PostDinnerEmailProps) {
+  const safeHostName = hostName || 'your host';
+
   return (
     <Html>
       <Head />
-      <Preview>Thanks for joining {hostName}&apos;s dinner!</Preview>
+      <Preview>Thanks for joining {safeHostName}&apos;s dinner!</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Thanks for Coming, {guestName}!</Heading>
 
           <Text style={text}>
-            We hope you had a wonderful time at {hostName}&apos;s dinner on{" "}
+            We hope you had a wonderful time at {safeHostName}&apos;s dinner on{" "}
             {dinnerDate}. Sharing meals with new people is what Con-Vive is all
             about.
           </Text>

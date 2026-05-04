@@ -42,16 +42,18 @@ export default function BookingConfirmationEmail({
   outlookCalendarUrl,
   icsDownloadUrl,
 }: BookingConfirmationEmailProps) {
+  const safeHostName = hostName || 'your host';
+
   return (
     <Html>
       <Head />
-      <Preview>Your spot at {hostName}&apos;s dinner is confirmed!</Preview>
+      <Preview>Your spot at {safeHostName}&apos;s dinner is confirmed!</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>You&apos;re In, {guestName}!</Heading>
 
           <Text style={text}>
-            Your spot at {hostName}&apos;s Con-Vive dinner is confirmed. We
+            Your spot at {safeHostName}&apos;s Con-Vive dinner is confirmed. We
             can&apos;t wait to see you there.
           </Text>
 
@@ -62,7 +64,7 @@ export default function BookingConfirmationEmail({
               <br />
               <strong>Time:</strong> {dinnerTime}
               <br />
-              <strong>Host:</strong> {hostName}
+              <strong>Host:</strong> {safeHostName}
             </Text>
           </Section>
 

@@ -29,6 +29,8 @@ export default function HostGuestConfirmedEmail({
   confirmedCount,
   totalSeats,
 }: HostGuestConfirmedEmailProps) {
+  const safeHostName = hostName || 'Host';
+
   return (
     <Html>
       <Head />
@@ -38,7 +40,7 @@ export default function HostGuestConfirmedEmail({
           <Heading style={h1}>New Guest Confirmed!</Heading>
 
           <Text style={text}>
-            Hi {hostName},
+            Hi {safeHostName},
           </Text>
 
           <Text style={text}>

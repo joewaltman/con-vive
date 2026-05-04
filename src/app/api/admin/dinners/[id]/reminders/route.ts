@@ -329,7 +329,9 @@ Here's a little about who you'll be dining with:
 
 ${otherBios}
 
-See you ${dayOfWeek}! - Joe`;
+See you ${dayOfWeek}! - Joe
+
+📖 First time? Check out our dinner guide: https://con-vive.com/guide`;
 
       return {
         guestId: guest.id,
