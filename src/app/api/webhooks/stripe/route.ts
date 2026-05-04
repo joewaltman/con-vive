@@ -307,7 +307,7 @@ async function handleBookingCheckoutCompleted(
       // Get confirmed count and total seats
       const statsResult = await query<{ confirmed_count: number; total_seats: number }>(
         `SELECT
-          COUNT(*) FILTER (WHERE status = 'booked') as confirmed_count,
+          COUNT(*) FILTER (WHERE i.status = 'booked') as confirmed_count,
           COALESCE(d.total_seats, 8) as total_seats
          FROM invitations i
          JOIN dinners d ON d.id = i.dinner_id
