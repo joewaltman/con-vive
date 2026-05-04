@@ -225,6 +225,7 @@ async function main() {
     console.log("\n--- Step 2 (M2): Prompt question ---");
 
     // Phase A: Schedule eligible guests
+    // Exclude cal-alumni signups (they use email-only communication)
     const { rows: step2ToSchedule } = await pool.query<SchedulableGuest>(
       `SELECT id, first_name
        FROM guests
@@ -237,6 +238,7 @@ async function main() {
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
+         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
        ORDER BY last_message_sent_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -262,6 +264,7 @@ async function main() {
     }
 
     // Phase B: Send scheduled texts
+    // Exclude cal-alumni signups (they use email-only communication)
     const { rows: step2ToSend } = await pool.query<SendableGuest>(
       `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
        FROM guests
@@ -274,6 +277,7 @@ async function main() {
          AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
+         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
        ORDER BY next_sequence_scheduled_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -325,6 +329,7 @@ async function main() {
     console.log("\n--- Step 3 (M3): Follow-up prompt ---");
 
     // Phase A: Schedule eligible guests
+    // Exclude cal-alumni signups (they use email-only communication)
     const { rows: step3ToSchedule } = await pool.query<SchedulableGuest>(
       `SELECT id, first_name
        FROM guests
@@ -337,6 +342,7 @@ async function main() {
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
+         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
        ORDER BY last_message_sent_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -362,6 +368,7 @@ async function main() {
     }
 
     // Phase B: Send scheduled texts
+    // Exclude cal-alumni signups (they use email-only communication)
     const { rows: step3ToSend } = await pool.query<SendableGuest>(
       `SELECT id, first_name, phone_clean, sequence_step, curious_about, next_sequence_scheduled_at
        FROM guests
@@ -374,6 +381,7 @@ async function main() {
          AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
+         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
        ORDER BY next_sequence_scheduled_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -422,6 +430,7 @@ async function main() {
     }
 
     // Silent close-out for guests who didn't respond to M3
+    // Exclude cal-alumni signups (they use email-only communication)
     console.log("\n--- Sequence close-out ---");
     const closeOutQuery = `
       UPDATE guests
@@ -434,6 +443,7 @@ async function main() {
         AND last_message_sent_at < NOW() - INTERVAL '48 hours'
         AND last_replied_at IS NULL
         AND phone_clean IS NOT NULL
+        AND (signup_source IS NULL OR signup_source != 'cal-alumni')
     `;
 
     if (dryRun) {
@@ -445,7 +455,8 @@ async function main() {
            AND priority IS NULL
            AND last_message_sent_at < NOW() - INTERVAL '48 hours'
            AND last_replied_at IS NULL
-           AND phone_clean IS NOT NULL`
+           AND phone_clean IS NOT NULL
+           AND (signup_source IS NULL OR signup_source != 'cal-alumni')`
       );
       console.log(`[DRY RUN] Would close out ${toCloseOut.length} guest(s) with no M3 response`);
       for (const guest of toCloseOut) {

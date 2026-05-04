@@ -199,6 +199,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
   let failed = 0;
 
   // Phase A: Schedule guests who need M1
+  // Exclude cal-alumni signups (they use email-only communication)
   console.log("Phase A: Scheduling...");
   const { rows: toSchedule } = await pool.query<SchedulableGuest>(
     `SELECT id, first_name, curious_about, surprising_knowledge, one_thing, about, created_at
@@ -208,6 +209,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
        AND next_sequence_scheduled_at IS NULL
        AND phone_clean IS NOT NULL
        AND phone_clean != ''
+       AND (signup_source IS NULL OR signup_source != 'cal-alumni')
      ORDER BY created_at ASC
      LIMIT $1`,
     [MAX_TEXTS_PER_RUN]
@@ -242,6 +244,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
   }
 
   // Phase B: Send scheduled texts
+  // Exclude cal-alumni signups (they use email-only communication)
   console.log("\nPhase B: Sending...");
   const { rows: toSend } = await pool.query<SendableGuest>(
     `SELECT id, first_name, phone_clean, curious_about, surprising_knowledge, one_thing, about, created_at, next_sequence_scheduled_at
@@ -252,6 +255,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
        AND next_sequence_scheduled_at <= NOW()
        AND phone_clean IS NOT NULL
        AND phone_clean != ''
+       AND (signup_source IS NULL OR signup_source != 'cal-alumni')
      ORDER BY next_sequence_scheduled_at ASC
      LIMIT $1`,
     [MAX_TEXTS_PER_RUN]

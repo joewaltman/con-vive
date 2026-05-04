@@ -80,6 +80,7 @@ async function main() {
 
     // Find guests who dropped off at Page 2 (have phone but no curious_about)
     // and haven't received a recovery text yet
+    // Exclude cal-alumni signups (they use email-only communication)
     const { rows: guests } = await pool.query<Guest>(
       `SELECT id, first_name, phone_clean
        FROM guests
@@ -89,6 +90,7 @@ async function main() {
          AND curious_about IS NULL
          AND recovery_text_sent = FALSE
          AND updated_at < NOW() - INTERVAL '1 hour'
+         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
        ORDER BY updated_at ASC`
     );
 
