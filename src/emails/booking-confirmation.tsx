@@ -26,6 +26,8 @@ interface BookingConfirmationEmailProps {
   outlookCalendarUrl: string;
   icsDownloadUrl: string;
   venueType?: string;
+  restaurantName?: string | null;
+  menu?: string | null;
 }
 
 export default function BookingConfirmationEmail({
@@ -43,21 +45,31 @@ export default function BookingConfirmationEmail({
   outlookCalendarUrl,
   icsDownloadUrl,
   venueType = 'home',
+  restaurantName,
+  menu,
 }: BookingConfirmationEmailProps) {
   const safeHostName = hostName || 'your host';
   const isRestaurant = venueType === 'restaurant';
+  const venueName = isRestaurant ? restaurantName : safeHostName;
 
   return (
     <Html>
       <Head />
-      <Preview>Your spot at {safeHostName}&apos;s dinner is confirmed!</Preview>
+      <Preview>
+        {isRestaurant
+          ? `Your spot at ${restaurantName} is confirmed!`
+          : `Your spot at ${safeHostName}'s dinner is confirmed!`}
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>You&apos;re In, {guestName}!</Heading>
 
           <Text style={text}>
-            Your spot at {safeHostName}&apos;s Con-Vive dinner is confirmed. We
-            can&apos;t wait to see you there.
+            {isRestaurant ? (
+              <>Your spot at the Con-Vive dinner at {restaurantName} is confirmed. We can&apos;t wait to see you there.</>
+            ) : (
+              <>Your spot at {safeHostName}&apos;s Con-Vive dinner is confirmed. We can&apos;t wait to see you there.</>
+            )}
           </Text>
 
           <Section style={detailsBox}>
@@ -66,30 +78,50 @@ export default function BookingConfirmationEmail({
               <strong>Date:</strong> {dinnerDate}
               <br />
               <strong>Time:</strong> {dinnerTime}
-              <br />
-              <strong>Host:</strong> {safeHostName}
-            </Text>
-          </Section>
-
-          <Section style={detailsBox}>
-            <Text style={detailsHeading}>Location</Text>
-            <Text style={detailsText}>
-              {address}
-              {googleMapsLink && (
+              {isRestaurant ? (
                 <>
                   <br />
-                  <Link href={googleMapsLink} style={link}>
-                    View on Google Maps
-                  </Link>
+                  <strong>Restaurant:</strong> {restaurantName}
+                </>
+              ) : (
+                <>
+                  <br />
+                  <strong>Host:</strong> {safeHostName}
                 </>
               )}
             </Text>
-            {parkingInstructions && (
-              <Text style={detailsText}>
-                <strong>Parking:</strong> {parkingInstructions}
-              </Text>
-            )}
           </Section>
+
+          {/* Menu section for restaurant dinners */}
+          {isRestaurant && menu && (
+            <Section style={detailsBox}>
+              <Text style={detailsHeading}>Menu</Text>
+              <Text style={menuText}>{menu}</Text>
+            </Section>
+          )}
+
+          {/* Location section - only for home dinners */}
+          {!isRestaurant && (
+            <Section style={detailsBox}>
+              <Text style={detailsHeading}>Location</Text>
+              <Text style={detailsText}>
+                {address}
+                {googleMapsLink && (
+                  <>
+                    <br />
+                    <Link href={googleMapsLink} style={link}>
+                      View on Google Maps
+                    </Link>
+                  </>
+                )}
+              </Text>
+              {parkingInstructions && (
+                <Text style={detailsText}>
+                  <strong>Parking:</strong> {parkingInstructions}
+                </Text>
+              )}
+            </Section>
+          )}
 
           {!isRestaurant && (
             <Section style={detailsBox}>
@@ -192,6 +224,14 @@ const detailsText = {
   fontSize: "16px",
   lineHeight: "1.6",
   margin: "0 0 8px",
+};
+
+const menuText = {
+  color: "#2d2d2d",
+  fontSize: "16px",
+  lineHeight: "1.6",
+  margin: "0 0 8px",
+  whiteSpace: "pre-wrap" as const,
 };
 
 const highlightText = {

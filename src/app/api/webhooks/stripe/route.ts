@@ -29,6 +29,7 @@ interface DinnerRow {
   host_first_name: string | null;
   host_email: string | null;
   venue_type: string | null;
+  restaurant_name: string | null;
 }
 
 interface GuestRow {
@@ -257,9 +258,11 @@ async function handleBookingCheckoutCompleted(
   const dinners = await query<DinnerRow>(
     `SELECT d.id, d.dinner_name, d.dinner_date, d.dinner_time, d.address, d.google_maps_link,
             d.parking_instructions, d.what_to_bring, d.menu, d.host_name, d.host, d.bring_items,
-            d.host_guest_id, d.venue_type, h.first_name as host_first_name, h.email as host_email
+            d.host_guest_id, d.venue_type, h.first_name as host_first_name, h.email as host_email,
+            r.name as restaurant_name
      FROM dinners d
      LEFT JOIN guests h ON h.id = d.host_guest_id
+     LEFT JOIN restaurants r ON r.id = d.restaurant_id
      WHERE d.id = $1`,
     [dinnerId]
   );
@@ -369,9 +372,13 @@ async function handleBookingCheckoutCompleted(
         }),
       });
     } else {
+      const emailSubject = isRestaurant
+        ? `You're in! Con-Vive Dinner at ${dinner.restaurant_name} on ${dinnerDate}`
+        : `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`;
+
       emailResult = await sendEmail({
         to: guest.email,
-        subject: `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`,
+        subject: emailSubject,
         react: BookingConfirmationEmail({
           guestName: guest.first_name,
           dinnerDate,
@@ -387,6 +394,8 @@ async function handleBookingCheckoutCompleted(
           outlookCalendarUrl,
           icsDownloadUrl,
           venueType: dinner.venue_type || 'home',
+          restaurantName: dinner.restaurant_name,
+          menu: dinner.menu,
         }),
       });
     }
