@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
 buildCommand = "npm run build"
+# Force rebuild: 2026-05-05
 
 [deploy]
 startCommand = "npm start"
