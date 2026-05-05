@@ -8,6 +8,7 @@ import {
 } from "@/lib/calendar";
 import BookingConfirmationEmail from "@/emails/booking-confirmation";
 import CalBookingConfirmationEmail from "@/emails/cal-booking-confirmation";
+import TrojanBookingConfirmationEmail from "@/emails/trojan-booking-confirmation";
 import HostGuestConfirmedEmail from "@/emails/host-guest-confirmed";
 import Stripe from "stripe";
 
@@ -323,45 +324,69 @@ async function handleBookingCheckoutCompleted(
 
   // Send confirmation email
   try {
-    const isCalAlumni = session.metadata?.signup_source === "cal-alumni";
+    const signupSource = session.metadata?.signup_source;
+    const isCalAlumni = signupSource === "cal-alumni";
+    const isTrojanAlumni = signupSource === "trojan-alumni";
 
-    const emailResult = isCalAlumni
-      ? await sendEmail({
-          to: guest.email,
-          subject: `You're confirmed for the Cal Alumni dinner - ${dinnerDate}`,
-          react: CalBookingConfirmationEmail({
-            guestName: guest.first_name,
-            dinnerDate,
-            dinnerTime,
-            address: dinner.address || "Address will be sent separately",
-            googleMapsLink: dinner.google_maps_link,
-            parkingInstructions: dinner.parking_instructions,
-            menu: dinner.menu,
-            bringItemAssignment,
-            googleCalendarUrl,
-            outlookCalendarUrl,
-            icsDownloadUrl,
-          }),
-        })
-      : await sendEmail({
-          to: guest.email,
-          subject: `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`,
-          react: BookingConfirmationEmail({
-            guestName: guest.first_name,
-            dinnerDate,
-            dinnerTime,
-            hostName,
-            address: dinner.address || "Address will be sent separately",
-            googleMapsLink: dinner.google_maps_link,
-            parkingInstructions: dinner.parking_instructions,
-            whatToBring: dinner.what_to_bring,
-            bringItemAssignment,
-            bringItemsUrl,
-            googleCalendarUrl,
-            outlookCalendarUrl,
-            icsDownloadUrl,
-          }),
-        });
+    let emailResult;
+
+    if (isCalAlumni) {
+      emailResult = await sendEmail({
+        to: guest.email,
+        subject: `You're confirmed for the Cal Alumni dinner - ${dinnerDate}`,
+        react: CalBookingConfirmationEmail({
+          guestName: guest.first_name,
+          dinnerDate,
+          dinnerTime,
+          address: dinner.address || "Address will be sent separately",
+          googleMapsLink: dinner.google_maps_link,
+          parkingInstructions: dinner.parking_instructions,
+          menu: dinner.menu,
+          bringItemAssignment,
+          googleCalendarUrl,
+          outlookCalendarUrl,
+          icsDownloadUrl,
+        }),
+      });
+    } else if (isTrojanAlumni) {
+      emailResult = await sendEmail({
+        to: guest.email,
+        subject: `You're confirmed for the Trojan Alumni dinner - ${dinnerDate}`,
+        react: TrojanBookingConfirmationEmail({
+          guestName: guest.first_name,
+          dinnerDate,
+          dinnerTime,
+          address: dinner.address || "Address will be sent separately",
+          googleMapsLink: dinner.google_maps_link,
+          parkingInstructions: dinner.parking_instructions,
+          menu: dinner.menu,
+          bringItemAssignment,
+          googleCalendarUrl,
+          outlookCalendarUrl,
+          icsDownloadUrl,
+        }),
+      });
+    } else {
+      emailResult = await sendEmail({
+        to: guest.email,
+        subject: `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`,
+        react: BookingConfirmationEmail({
+          guestName: guest.first_name,
+          dinnerDate,
+          dinnerTime,
+          hostName,
+          address: dinner.address || "Address will be sent separately",
+          googleMapsLink: dinner.google_maps_link,
+          parkingInstructions: dinner.parking_instructions,
+          whatToBring: dinner.what_to_bring,
+          bringItemAssignment,
+          bringItemsUrl,
+          googleCalendarUrl,
+          outlookCalendarUrl,
+          icsDownloadUrl,
+        }),
+      });
+    }
 
     if (emailResult.success) {
       // Update confirmation_email_sent_at

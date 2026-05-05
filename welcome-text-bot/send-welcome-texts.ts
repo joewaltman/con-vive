@@ -209,7 +209,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
        AND next_sequence_scheduled_at IS NULL
        AND phone_clean IS NOT NULL
        AND phone_clean != ''
-       AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+       AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
      ORDER BY created_at ASC
      LIMIT $1`,
     [MAX_TEXTS_PER_RUN]
@@ -255,7 +255,7 @@ async function sendWelcomeTexts(pool: Pool, dryRun: boolean): Promise<void> {
        AND next_sequence_scheduled_at <= NOW()
        AND phone_clean IS NOT NULL
        AND phone_clean != ''
-       AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+       AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
      ORDER BY next_sequence_scheduled_at ASC
      LIMIT $1`,
     [MAX_TEXTS_PER_RUN]

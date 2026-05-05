@@ -238,7 +238,7 @@ async function main() {
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
-         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+         AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
        ORDER BY last_message_sent_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -277,7 +277,7 @@ async function main() {
          AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
-         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+         AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
        ORDER BY next_sequence_scheduled_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -342,7 +342,7 @@ async function main() {
          AND next_sequence_scheduled_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
-         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+         AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
        ORDER BY last_message_sent_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -381,7 +381,7 @@ async function main() {
          AND last_replied_at IS NULL
          AND phone_clean IS NOT NULL
          AND phone_clean != ''
-         AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+         AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
        ORDER BY next_sequence_scheduled_at ASC
        LIMIT $1`,
       [MAX_PER_RUN]
@@ -443,7 +443,7 @@ async function main() {
         AND last_message_sent_at < NOW() - INTERVAL '48 hours'
         AND last_replied_at IS NULL
         AND phone_clean IS NOT NULL
-        AND (signup_source IS NULL OR signup_source != 'cal-alumni')
+        AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))
     `;
 
     if (dryRun) {
@@ -456,7 +456,7 @@ async function main() {
            AND last_message_sent_at < NOW() - INTERVAL '48 hours'
            AND last_replied_at IS NULL
            AND phone_clean IS NOT NULL
-           AND (signup_source IS NULL OR signup_source != 'cal-alumni')`
+           AND (signup_source IS NULL OR signup_source NOT IN ('cal-alumni', 'trojan-alumni'))`
       );
       console.log(`[DRY RUN] Would close out ${toCloseOut.length} guest(s) with no M3 response`);
       for (const guest of toCloseOut) {
