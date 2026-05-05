@@ -96,7 +96,14 @@ export default function BookingConfirmationEmail({
           {isRestaurant && menu && (
             <Section style={detailsBox}>
               <Text style={detailsHeading}>Menu</Text>
-              <Text style={menuText}>{menu}</Text>
+              <Text style={detailsText}>
+                {menu.split('\n').map((line, i, arr) => (
+                  <span key={i}>
+                    {line}
+                    {i < arr.length - 1 && <br />}
+                  </span>
+                ))}
+              </Text>
             </Section>
           )}
 
@@ -224,14 +231,6 @@ const detailsText = {
   fontSize: "16px",
   lineHeight: "1.6",
   margin: "0 0 8px",
-};
-
-const menuText = {
-  color: "#2d2d2d",
-  fontSize: "16px",
-  lineHeight: "1.6",
-  margin: "0 0 8px",
-  whiteSpace: "pre-wrap" as const,
 };
 
 const highlightText = {
