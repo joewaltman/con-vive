@@ -340,7 +340,9 @@ export default function BookingPage({
                 {formatPrice(dinner.price_cents)}
               </p>
               <p className="body-sm mt-1 text-warm-gray">
-                Covers dinner, drinks & the experience
+                {dinner.venue_type === 'restaurant'
+                  ? 'Covers food only. Drinks paid separately at the restaurant.'
+                  : 'Covers dinner, drinks & the experience'}
               </p>
             </div>
           </div>
