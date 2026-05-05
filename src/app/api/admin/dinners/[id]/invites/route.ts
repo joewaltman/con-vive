@@ -122,9 +122,15 @@ export async function POST(
         const bookingLink = `${websiteBaseUrl}/d/${token}`;
 
         // Send email
+        const isRestaurant = dinner.fields['Venue Type'] === 'restaurant';
+        const restaurantName = dinner.restaurant?.fields['Name'];
+        const emailSubject = isRestaurant
+          ? `You're invited to a Con-Vive dinner at ${restaurantName} on ${formattedDate}`
+          : `You're invited to a Con-Vive dinner on ${formattedDate}`;
+
         const emailResult = await sendEmail({
           to: guest.email,
-          subject: `You're invited to a Con-Vive dinner on ${formattedDate}`,
+          subject: emailSubject,
           react: InviteEmail({
             guestFirstName: guest.firstName || 'Friend',
             dinnerDate: formattedDate,
@@ -134,6 +140,8 @@ export async function POST(
             vibeDescriptor: dinner.fields['Vibe Descriptor'],
             priceDollars,
             magicLink: bookingLink,
+            venueType: dinner.fields['Venue Type'] || 'home',
+            restaurantName,
           }),
         });
 

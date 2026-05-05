@@ -23,11 +23,14 @@ export async function POST(
         d.vibe_descriptor,
         d.price_cents,
         d.host_guest_id,
-        h.first_name as host_first_name
+        d.venue_type,
+        h.first_name as host_first_name,
+        r.name as restaurant_name
       FROM invitations i
       JOIN guests g ON g.id = i.guest_id
       JOIN dinners d ON d.id = i.dinner_id
       LEFT JOIN guests h ON h.id = d.host_guest_id
+      LEFT JOIN restaurants r ON r.id = d.restaurant_id
       WHERE i.id = $1
     `, [id]);
 
@@ -69,9 +72,14 @@ export async function POST(
     const bookingLink = `${websiteBaseUrl}/d/${token}`;
 
     // Send email
+    const isRestaurant = invitation.venue_type === 'restaurant';
+    const emailSubject = isRestaurant
+      ? `Reminder: You're invited to a Con-Vive dinner at ${invitation.restaurant_name} on ${formattedDate}`
+      : `Reminder: You're invited to a Con-Vive dinner on ${formattedDate}`;
+
     const emailResult = await sendEmail({
       to: invitation.guest_email,
-      subject: `Reminder: You're invited to a Con-Vive dinner on ${formattedDate}`,
+      subject: emailSubject,
       react: InviteEmail({
         guestFirstName: invitation.guest_first_name || 'Friend',
         dinnerDate: formattedDate,
@@ -81,6 +89,8 @@ export async function POST(
         vibeDescriptor: invitation.vibe_descriptor,
         priceDollars,
         magicLink: bookingLink,
+        venueType: invitation.venue_type || 'home',
+        restaurantName: invitation.restaurant_name,
       }),
     });
 

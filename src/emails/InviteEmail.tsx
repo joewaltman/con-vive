@@ -21,6 +21,8 @@ interface InviteEmailProps {
   vibeDescriptor?: string;
   priceDollars: number;
   magicLink: string;
+  venueType?: string;
+  restaurantName?: string | null;
 }
 
 export default function InviteEmail({
@@ -32,9 +34,14 @@ export default function InviteEmail({
   vibeDescriptor,
   priceDollars,
   magicLink,
+  venueType = 'home',
+  restaurantName,
 }: InviteEmailProps) {
   const safeHostFirstName = hostFirstName || 'your host';
-  const previewText = `You're invited to a Con-Vive dinner on ${dinnerDate}`;
+  const isRestaurant = venueType === 'restaurant';
+  const previewText = isRestaurant
+    ? `You're invited to a Con-Vive dinner at ${restaurantName} on ${dinnerDate}`
+    : `You're invited to a Con-Vive dinner on ${dinnerDate}`;
 
   return (
     <Html>
@@ -58,9 +65,15 @@ export default function InviteEmail({
             <Text style={detailsText}>
               <strong>When:</strong> {dinnerDate} at {dinnerTime}
             </Text>
-            <Text style={detailsText}>
-              <strong>Host:</strong> {safeHostFirstName}
-            </Text>
+            {isRestaurant ? (
+              <Text style={detailsText}>
+                <strong>Restaurant:</strong> {restaurantName}
+              </Text>
+            ) : (
+              <Text style={detailsText}>
+                <strong>Host:</strong> {safeHostFirstName}
+              </Text>
+            )}
             <Text style={detailsText}>
               <strong>Menu:</strong> {menu}
             </Text>
