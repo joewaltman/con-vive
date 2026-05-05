@@ -84,8 +84,17 @@ export async function POST(
       failed: [],
     };
 
+    // Helper to delay between emails (rate limit: 5/sec, so 250ms minimum)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     // Process each guest
-    for (const guestId of guestIds) {
+    for (let i = 0; i < guestIds.length; i++) {
+      const guestId = guestIds[i];
+
+      // Add delay between email sends to avoid rate limiting (after first email)
+      if (i > 0 && result.sent > 0) {
+        await delay(250);
+      }
       // Skip if already invited
       if (existingIds.has(guestId)) {
         result.skipped++;
