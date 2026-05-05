@@ -30,6 +30,7 @@ interface BookingData {
     bring_items: BringItem[];
     menu: string | null;
     venue_type: string;
+    restaurant_name: string | null;
   };
   guest: {
     id: number;
@@ -216,8 +217,7 @@ export default function BookingPage({
             You&rsquo;re Already Booked!
           </h1>
           <p className="body-lg mt-6 text-warm-gray">
-            Your spot at {dinner.host_name}&rsquo;s dinner on{" "}
-            {formatDate(dinner.date)} is confirmed.
+            Your spot for the {formatDate(dinner.date)} dinner is confirmed.
           </p>
           <p className="body-base mt-6 text-charcoal">
             Check your email for all the details, or text Joe at{" "}
@@ -293,7 +293,9 @@ export default function BookingPage({
         <div className="text-center">
           <h1 className="heading-1 text-charcoal">Hey {guest.first_name}!</h1>
           <p className="body-lg mt-4 text-warm-gray">
-            You&rsquo;re invited to {dinner.host_name}&rsquo;s dinner
+            {dinner.venue_type === 'restaurant'
+              ? `You're invited to a Con-Vive dinner at ${dinner.restaurant_name}`
+              : `You're invited to ${dinner.host_name}'s dinner`}
           </p>
         </div>
 

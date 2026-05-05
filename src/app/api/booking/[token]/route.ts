@@ -40,6 +40,7 @@ interface DinnerRow {
   menu: string | null;
   host: string;
   venue_type: string | null;
+  restaurant_name: string | null;
 }
 
 interface BookedGuestRow {
@@ -89,14 +90,15 @@ export async function GET(
 
   // Get dinner info
   const dinners = await query<DinnerRow>(
-    `SELECT id, dinner_name, dinner_date, dinner_time,
-            COALESCE(price_cents, 4000) as price_cents,
-            COALESCE(capacity, 6) as capacity,
-            address, google_maps_link, parking_instructions,
-            what_to_bring, host_name, bring_items, menu, host,
-            venue_type
-     FROM dinners
-     WHERE id = $1`,
+    `SELECT d.id, d.dinner_name, d.dinner_date, d.dinner_time,
+            COALESCE(d.price_cents, 4000) as price_cents,
+            COALESCE(d.capacity, 6) as capacity,
+            d.address, d.google_maps_link, d.parking_instructions,
+            d.what_to_bring, d.host_name, d.bring_items, d.menu, d.host,
+            d.venue_type, r.name as restaurant_name
+     FROM dinners d
+     LEFT JOIN restaurants r ON r.id = d.restaurant_id
+     WHERE d.id = $1`,
     [invitation.dinner_id]
   );
 
@@ -148,6 +150,7 @@ export async function GET(
       bring_items: bringItems,
       menu: dinner.menu,
       venue_type: dinner.venue_type || 'home',
+      restaurant_name: dinner.restaurant_name,
     },
     guest: {
       id: guest.id,

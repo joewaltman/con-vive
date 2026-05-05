@@ -30,6 +30,7 @@ interface BookingData {
     bring_items: BringItem[];
     menu: string | null;
     venue_type: string;
+    restaurant_name: string | null;
   };
   guest: {
     id: number;
@@ -119,11 +120,19 @@ export default function BookingSuccessPage({
   }
 
   // Generate calendar URLs
+  const isRestaurant = dinner.venue_type === 'restaurant';
+  const calendarTitle = isRestaurant
+    ? `Con-Vive Dinner at ${dinner.restaurant_name}`
+    : `Con-Vive Dinner at ${dinner.host_name}'s`;
+  const calendarDetails = isRestaurant
+    ? `You're attending a Con-Vive dinner at ${dinner.restaurant_name}.\n\nQuestions? Text Joe at (760) 274-8830`
+    : `You're attending a Con-Vive dinner hosted by ${dinner.host_name}.\n\nAddress: ${dinner.address}\n\nQuestions? Text Joe at (760) 274-8830`;
+
   const calendarParams = new URLSearchParams({
     action: "TEMPLATE",
-    text: `Con-Vive Dinner at ${dinner.host_name}'s`,
+    text: calendarTitle,
     dates: buildGoogleCalendarDates(dinner.date, dinner.time),
-    details: `You're attending a Con-Vive dinner hosted by ${dinner.host_name}.\n\nAddress: ${dinner.address}\n\nQuestions? Text Joe at (760) 274-8830`,
+    details: calendarDetails,
     location: dinner.address || "",
   });
   const googleCalendarUrl = `https://calendar.google.com/calendar/render?${calendarParams.toString()}`;
@@ -152,7 +161,7 @@ export default function BookingSuccessPage({
             You&rsquo;re In, {guest.first_name}!
           </h1>
           <p className="body-lg mt-4 text-warm-gray">
-            Your spot at {dinner.host_name}&rsquo;s dinner is confirmed.
+            Your spot is confirmed. We can&rsquo;t wait to see you there.
           </p>
         </div>
 
