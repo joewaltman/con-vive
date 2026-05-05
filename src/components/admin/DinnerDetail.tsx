@@ -528,12 +528,14 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
         <CalAlumniSection dinnerId={dinnerId} />
       )}
 
-      {/* What to Bring */}
-      <BringItemSection
-        items={dinner.bringItems || []}
-        onAdd={handleAddBringItem}
-        onDelete={handleDeleteBringItem}
-      />
+      {/* What to Bring - only for home dinners */}
+      {dinner.fields['Venue Type'] !== 'restaurant' && (
+        <BringItemSection
+          items={dinner.bringItems || []}
+          onAdd={handleAddBringItem}
+          onDelete={handleDeleteBringItem}
+        />
+      )}
 
       {/* Reminder Texts */}
       <ReminderSection

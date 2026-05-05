@@ -20,6 +20,7 @@ interface Dinner {
   host_name: string | null;
   host_first_name: string | null;
   menu: string | null;
+  venue_type: string | null;
 }
 
 interface BringItemRow {
@@ -75,7 +76,7 @@ export async function GET(
   // Get dinner info
   const dinners = await query<Dinner>(
     `SELECT d.id, d.dinner_name, d.dinner_date, d.host, d.host_name, d.menu,
-            h.first_name as host_first_name
+            d.venue_type, h.first_name as host_first_name
      FROM dinners d
      LEFT JOIN guests h ON h.id = d.host_guest_id
      WHERE d.id = $1`,
@@ -141,6 +142,7 @@ export async function GET(
       date: dinner.dinner_date,
       host: hostName,
       menu: dinner.menu,
+      venue_type: dinner.venue_type || 'home',
     },
     items,
   });

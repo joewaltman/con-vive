@@ -127,6 +127,27 @@ export interface Host {
   linkedGuest?: Guest | null;
 }
 
+// Restaurant types
+export interface RestaurantFields {
+  'Name'?: string;
+  'Address'?: string;
+  'City'?: string;
+  'Phone'?: string;
+  'Website'?: string;
+  'Notes'?: string;
+  'Active'?: boolean;
+  'Created Time'?: string;
+}
+
+export interface Restaurant {
+  id: string;
+  fields: RestaurantFields;
+  dinnerCount?: number;
+}
+
+// Venue type
+export type VenueType = 'home' | 'restaurant';
+
 // Dinner types
 export interface DinnerFields {
   'Dinner Name'?: string;
@@ -155,12 +176,16 @@ export interface DinnerFields {
   // Cal Alumni fields
   'signup_source'?: string;
   'enforce_gender_balance'?: boolean;
+  // Venue fields
+  'Venue Type'?: VenueType;
+  'Restaurant ID'?: number | null;
 }
 
 export interface Dinner {
   id: string;
   fields: DinnerFields;
   host?: Host | null;
+  restaurant?: Restaurant | null;
   invitations?: Invitation[];
   bringItems?: BringItem[];
   confirmedCount?: number;

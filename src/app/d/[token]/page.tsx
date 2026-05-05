@@ -29,6 +29,7 @@ interface BookingData {
     host_name: string;
     bring_items: BringItem[];
     menu: string | null;
+    venue_type: string;
   };
   guest: {
     id: number;
@@ -355,8 +356,8 @@ export default function BookingPage({
           </div>
         )}
 
-        {/* Bring Items Selection */}
-        {availableBringSlots.length > 0 && (
+        {/* Bring Items Selection - only for home dinners */}
+        {dinner.venue_type !== 'restaurant' && availableBringSlots.length > 0 && (
           <div className="mt-6 rounded-xl border border-border bg-white p-6">
             <h2 className="heading-2 text-charcoal">
               Want to bring something?

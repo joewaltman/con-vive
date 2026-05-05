@@ -68,18 +68,30 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!fields['Host ID']) {
-      return NextResponse.json(
-        { error: 'Host is required' },
-        { status: 400 }
-      );
-    }
+    const venueType = fields['Venue Type'] || 'home';
 
-    if (!fields['Host']?.trim()) {
-      return NextResponse.json(
-        { error: 'Host name is required' },
-        { status: 400 }
-      );
+    // Validate based on venue type
+    if (venueType === 'home') {
+      if (!fields['Host ID']) {
+        return NextResponse.json(
+          { error: 'Host is required for home dinners' },
+          { status: 400 }
+        );
+      }
+
+      if (!fields['Host']?.trim()) {
+        return NextResponse.json(
+          { error: 'Host name is required' },
+          { status: 400 }
+        );
+      }
+    } else if (venueType === 'restaurant') {
+      if (!fields['Restaurant ID']) {
+        return NextResponse.json(
+          { error: 'Restaurant is required for restaurant dinners' },
+          { status: 400 }
+        );
+      }
     }
 
     const dinner = await createDinner(fields);

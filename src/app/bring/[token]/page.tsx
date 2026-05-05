@@ -27,6 +27,7 @@ interface BringData {
     date: string;
     host: string;
     menu: string | null;
+    venue_type: string;
   };
   items: BringItem[];
 }
@@ -182,6 +183,27 @@ export default function BringPage({
   }
 
   const { guest, dinner, items } = data;
+
+  // Restaurant dinners don't have bring items
+  if (dinner.venue_type === 'restaurant') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="mx-auto max-w-lg">
+          <h1 className="heading-1 text-charcoal">No Items to Bring</h1>
+          <p className="body-lg mt-6 text-warm-gray">
+            This is a restaurant dinner, so there&rsquo;s nothing to bring.
+            Just show up and enjoy!
+          </p>
+          <p className="body-base mt-6 text-charcoal">
+            Questions? Text Joe at{" "}
+            <a href="sms:+17602748830" className="text-terracotta underline">
+              (760) 274-8830
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Items the current user has claimed
   const myClaimedItems = items.filter((item) =>

@@ -39,6 +39,7 @@ interface DinnerRow {
   bring_items: BringItem[] | null;
   menu: string | null;
   host: string;
+  venue_type: string | null;
 }
 
 interface BookedGuestRow {
@@ -92,7 +93,8 @@ export async function GET(
             COALESCE(price_cents, 4000) as price_cents,
             COALESCE(capacity, 6) as capacity,
             address, google_maps_link, parking_instructions,
-            what_to_bring, host_name, bring_items, menu, host
+            what_to_bring, host_name, bring_items, menu, host,
+            venue_type
      FROM dinners
      WHERE id = $1`,
     [invitation.dinner_id]
@@ -145,6 +147,7 @@ export async function GET(
       host_name: dinner.host_name || dinner.host,
       bring_items: bringItems,
       menu: dinner.menu,
+      venue_type: dinner.venue_type || 'home',
     },
     guest: {
       id: guest.id,

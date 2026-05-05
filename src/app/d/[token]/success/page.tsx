@@ -29,6 +29,7 @@ interface BookingData {
     host_name: string;
     bring_items: BringItem[];
     menu: string | null;
+    venue_type: string;
   };
   guest: {
     id: number;
@@ -203,8 +204,8 @@ export default function BookingSuccessPage({
           </div>
         </div>
 
-        {/* Bring Item Assignment */}
-        {bringItemName && (
+        {/* Bring Item Assignment - only for home dinners */}
+        {dinner.venue_type !== 'restaurant' && bringItemName && (
           <div className="mt-6 rounded-xl border-2 border-terracotta bg-terracotta/5 p-6">
             <p className="body-sm font-medium uppercase tracking-wide text-terracotta">
               You&rsquo;re Bringing
@@ -213,8 +214,8 @@ export default function BookingSuccessPage({
           </div>
         )}
 
-        {/* What to Bring */}
-        {dinner.what_to_bring && (
+        {/* What to Bring - only for home dinners */}
+        {dinner.venue_type !== 'restaurant' && dinner.what_to_bring && (
           <div className="mt-6 rounded-xl border border-border bg-white p-6">
             <p className="body-sm font-medium uppercase tracking-wide text-warm-gray">
               What to Bring
@@ -265,28 +266,30 @@ export default function BookingSuccessPage({
           </div>
         </div>
 
-        {/* Sign Up to Bring Something */}
-        <div className="mt-8">
-          <a
-            href={`/bring/${token}`}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-terracotta px-6 py-4 text-white font-medium transition-colors hover:bg-terracotta/90"
-          >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
+        {/* Sign Up to Bring Something - only for home dinners */}
+        {dinner.venue_type !== 'restaurant' && (
+          <div className="mt-8">
+            <a
+              href={`/bring/${token}`}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-terracotta px-6 py-4 text-white font-medium transition-colors hover:bg-terracotta/90"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Sign Up to Bring Something
-          </a>
-        </div>
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Sign Up to Bring Something
+            </a>
+          </div>
+        )}
 
         {/* Confirmation Email Notice */}
         <div className="mt-8 rounded-xl bg-cream/50 p-6 text-center">

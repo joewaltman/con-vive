@@ -28,6 +28,7 @@ interface DinnerRow {
   host_guest_id: number | null;
   host_first_name: string | null;
   host_email: string | null;
+  venue_type: string | null;
 }
 
 interface GuestRow {
@@ -256,7 +257,7 @@ async function handleBookingCheckoutCompleted(
   const dinners = await query<DinnerRow>(
     `SELECT d.id, d.dinner_name, d.dinner_date, d.dinner_time, d.address, d.google_maps_link,
             d.parking_instructions, d.what_to_bring, d.menu, d.host_name, d.host, d.bring_items,
-            d.host_guest_id, h.first_name as host_first_name, h.email as host_email
+            d.host_guest_id, d.venue_type, h.first_name as host_first_name, h.email as host_email
      FROM dinners d
      LEFT JOIN guests h ON h.id = d.host_guest_id
      WHERE d.id = $1`,
@@ -303,7 +304,8 @@ async function handleBookingCheckoutCompleted(
 
   const baseUrl = getBaseUrl();
   const icsDownloadUrl = `${baseUrl}/api/calendar/${effectiveToken}`;
-  const bringItemsUrl = `${baseUrl}/bring/${effectiveToken}`;
+  const isRestaurant = dinner.venue_type === 'restaurant';
+  const bringItemsUrl = isRestaurant ? null : `${baseUrl}/bring/${effectiveToken}`;
 
   // Generate calendar URLs
   // Convert date to string if it's a Date object
@@ -378,12 +380,13 @@ async function handleBookingCheckoutCompleted(
           address: dinner.address || "Address will be sent separately",
           googleMapsLink: dinner.google_maps_link,
           parkingInstructions: dinner.parking_instructions,
-          whatToBring: dinner.what_to_bring,
-          bringItemAssignment,
+          whatToBring: isRestaurant ? null : dinner.what_to_bring,
+          bringItemAssignment: isRestaurant ? null : bringItemAssignment,
           bringItemsUrl,
           googleCalendarUrl,
           outlookCalendarUrl,
           icsDownloadUrl,
+          venueType: dinner.venue_type || 'home',
         }),
       });
     }

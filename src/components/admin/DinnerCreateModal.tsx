@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format, addDays } from 'date-fns';
 import useSWR from 'swr';
-import type { DinnerFields, DinnerStatus, DinnerType, BringSlots } from '@/lib/types/admin';
+import type { DinnerFields, DinnerStatus, DinnerType, BringSlots, VenueType, Restaurant } from '@/lib/types/admin';
 import {
   DEFAULT_START_TIME,
   DEFAULT_TOTAL_SEATS,
@@ -48,6 +48,16 @@ interface HostCandidate {
   dinnerCount: number;
 }
 
+interface RestaurantCandidate {
+  id: string;
+  fields: {
+    Name?: string;
+    Address?: string;
+    City?: string;
+    Active?: boolean;
+  };
+}
+
 interface DinnerCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,6 +65,7 @@ interface DinnerCreateModalProps {
 }
 
 export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerCreateModalProps) {
+  const [venueType, setVenueType] = useState<VenueType>('home');
   const [fields, setFields] = useState<Partial<DinnerFields>>({
     'Dinner Date': format(new Date(), 'yyyy-MM-dd'),
     'Start Time': DEFAULT_START_TIME,
@@ -64,8 +75,10 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     'Dinner Type': 'couples_allowed',
     'Bring Slots': DEFAULT_BRING_SLOTS,
     'Status': 'draft',
+    'Venue Type': 'home',
   });
   const [selectedHostId, setSelectedHostId] = useState<string>('');
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   const [customName, setCustomName] = useState<string>('');
   const [useAutoName, setUseAutoName] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -84,27 +97,51 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     fetcher
   );
 
+  // Fetch restaurant candidates
+  const { data: restaurantCandidates } = useSWR<RestaurantCandidate[]>(
+    isOpen ? '/api/admin/restaurants' : null,
+    fetcher
+  );
+
   // Get selected host
   const selectedHost = useMemo(() => {
     return hostCandidates?.find(h => String(h.id) === selectedHostId) || null;
   }, [hostCandidates, selectedHostId]);
 
+  // Get selected restaurant
+  const selectedRestaurant = useMemo(() => {
+    return restaurantCandidates?.find(r => r.id === selectedRestaurantId) || null;
+  }, [restaurantCandidates, selectedRestaurantId]);
+
   // Auto-generate dinner name
   const autoName = useMemo(() => {
-    if (!fields['Dinner Date'] || !selectedHost) return '';
-    return generateDinnerName(fields['Dinner Date'], selectedHost.firstName);
-  }, [fields['Dinner Date'], selectedHost]);
+    if (!fields['Dinner Date']) return '';
+    if (venueType === 'home' && selectedHost) {
+      return generateDinnerName(fields['Dinner Date'], selectedHost.firstName);
+    }
+    if (venueType === 'restaurant' && selectedRestaurant) {
+      const name = selectedRestaurant.fields['Name'] || 'restaurant';
+      return generateDinnerName(fields['Dinner Date'], name);
+    }
+    return '';
+  }, [fields['Dinner Date'], venueType, selectedHost, selectedRestaurant]);
 
-  // Auto-fill address from host
+  // Auto-fill address from host or restaurant
   useEffect(() => {
-    if (selectedHost?.address) {
+    if (venueType === 'home' && selectedHost?.address) {
       setFields(prev => ({
         ...prev,
         'Address': selectedHost.address || undefined,
         'Location': selectedHost.address || undefined, // Also set legacy Location field
       }));
+    } else if (venueType === 'restaurant' && selectedRestaurant?.fields['Address']) {
+      setFields(prev => ({
+        ...prev,
+        'Address': selectedRestaurant.fields['Address'] || undefined,
+        'Location': selectedRestaurant.fields['Address'] || undefined,
+      }));
     }
-  }, [selectedHost]);
+  }, [venueType, selectedHost, selectedRestaurant]);
 
   // Update booking cutoff when date or time changes
   useEffect(() => {
@@ -136,6 +173,28 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     }));
   }, []);
 
+  const handleVenueTypeChange = useCallback((newVenueType: VenueType) => {
+    setVenueType(newVenueType);
+    setFields(prev => ({
+      ...prev,
+      'Venue Type': newVenueType,
+      // Clear host/restaurant when switching venue type
+      'Host ID': newVenueType === 'home' ? prev['Host ID'] : null,
+      'Host': newVenueType === 'home' ? prev['Host'] : undefined,
+      'Host Guest ID': newVenueType === 'home' ? prev['Host Guest ID'] : undefined,
+      'Restaurant ID': newVenueType === 'restaurant' ? prev['Restaurant ID'] : null,
+      // Clear bring slots for restaurant dinners
+      'Bring Slots': newVenueType === 'restaurant' ? { wine: 0, appetizer: 0, dessert: 0 } : DEFAULT_BRING_SLOTS,
+    }));
+    // Reset selections when switching
+    if (newVenueType === 'home') {
+      setSelectedRestaurantId('');
+    } else {
+      setSelectedHostId('');
+    }
+    setError(null);
+  }, []);
+
   const handleHostChange = useCallback((hostId: string) => {
     setSelectedHostId(hostId);
     if (hostId) {
@@ -158,14 +217,36 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     setError(null);
   }, [hostCandidates]);
 
+  const handleRestaurantChange = useCallback((restaurantId: string) => {
+    setSelectedRestaurantId(restaurantId);
+    if (restaurantId) {
+      setFields(prev => ({
+        ...prev,
+        'Restaurant ID': parseInt(restaurantId),
+      }));
+    } else {
+      setFields(prev => {
+        const { 'Restaurant ID': _unused, ...rest } = prev;
+        void _unused;
+        return rest;
+      });
+    }
+    setError(null);
+  }, []);
+
   const handleSubmit = useCallback(async (status: DinnerStatus) => {
     if (!fields['Dinner Date']) {
       setError('Dinner date is required');
       return;
     }
 
-    if (!selectedHostId) {
-      setError('Host is required');
+    if (venueType === 'home' && !selectedHostId) {
+      setError('Host is required for home dinners');
+      return;
+    }
+
+    if (venueType === 'restaurant' && !selectedRestaurantId) {
+      setError('Restaurant is required for restaurant dinners');
       return;
     }
 
@@ -183,6 +264,7 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
       });
 
       // Reset form
+      setVenueType('home');
       setFields({
         'Dinner Date': format(new Date(), 'yyyy-MM-dd'),
         'Start Time': DEFAULT_START_TIME,
@@ -192,8 +274,10 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
         'Dinner Type': 'couples_allowed',
         'Bring Slots': DEFAULT_BRING_SLOTS,
         'Status': 'draft',
+        'Venue Type': 'home',
       });
       setSelectedHostId('');
+      setSelectedRestaurantId('');
       setCustomName('');
       setUseAutoName(true);
       setPriceInput(String(DEFAULT_PRICE_CENTS / 100));
@@ -203,11 +287,12 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
     } finally {
       setIsCreating(false);
     }
-  }, [fields, selectedHostId, useAutoName, autoName, customName, onCreate, onClose]);
+  }, [fields, venueType, selectedHostId, selectedRestaurantId, useAutoName, autoName, customName, onCreate, onClose]);
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      setVenueType('home');
       setFields({
         'Dinner Date': format(new Date(), 'yyyy-MM-dd'),
         'Start Time': DEFAULT_START_TIME,
@@ -217,8 +302,10 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
         'Dinner Type': 'couples_allowed',
         'Bring Slots': DEFAULT_BRING_SLOTS,
         'Status': 'draft',
+        'Venue Type': 'home',
       });
       setSelectedHostId('');
+      setSelectedRestaurantId('');
       setCustomName('');
       setUseAutoName(true);
       setPriceInput(String(DEFAULT_PRICE_CENTS / 100));
@@ -260,6 +347,35 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
             expanded={expandedSections.basic}
             onToggle={() => toggleSection('basic')}
           >
+            {/* Venue Type Toggle */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Venue Type</label>
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => handleVenueTypeChange('home')}
+                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                    venueType === 'home'
+                      ? 'bg-terracotta text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Home Dinner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleVenueTypeChange('restaurant')}
+                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                    venueType === 'restaurant'
+                      ? 'bg-terracotta text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Restaurant Dinner
+                </button>
+              </div>
+            </div>
+
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -287,24 +403,46 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
               </div>
             </div>
 
-            {/* Host */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Host</label>
-              <select
-                value={selectedHostId}
-                onChange={(e) => handleHostChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
-              >
-                <option value="">Select a host...</option>
-                {hostCandidates?.map(host => (
-                  <option key={host.id} value={host.id}>
-                    {host.firstName} {host.lastName}
-                    {host.city ? ` (${host.city})` : ''}
-                    {host.dinnerCount > 0 ? ` - ${host.dinnerCount} dinners` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Host (for home dinners) */}
+            {venueType === 'home' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Host</label>
+                <select
+                  value={selectedHostId}
+                  onChange={(e) => handleHostChange(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
+                >
+                  <option value="">Select a host...</option>
+                  {hostCandidates?.map(host => (
+                    <option key={host.id} value={host.id}>
+                      {host.firstName} {host.lastName}
+                      {host.city ? ` (${host.city})` : ''}
+                      {host.dinnerCount > 0 ? ` - ${host.dinnerCount} dinners` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Restaurant (for restaurant dinners) */}
+            {venueType === 'restaurant' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant</label>
+                <select
+                  value={selectedRestaurantId}
+                  onChange={(e) => handleRestaurantChange(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
+                >
+                  <option value="">Select a restaurant...</option>
+                  {restaurantCandidates?.filter(r => r.fields['Active'] !== false).map(restaurant => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.fields['Name']}
+                      {restaurant.fields['City'] ? ` (${restaurant.fields['City']})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Dinner Name */}
             <div className="mt-4">
@@ -503,44 +641,47 @@ export default function DinnerCreateModal({ isOpen, onClose, onCreate }: DinnerC
               />
             </div>
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Bring Slots</label>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Wine</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={bringSlots.wine}
-                    onChange={(e) => handleBringSlotChange('wine', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Appetizer</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={bringSlots.appetizer}
-                    onChange={(e) => handleBringSlotChange('appetizer', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Dessert</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={bringSlots.dessert}
-                    onChange={(e) => handleBringSlotChange('dessert', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
-                  />
+            {/* Bring Slots - only for home dinners */}
+            {venueType === 'home' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bring Slots</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Wine</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={bringSlots.wine}
+                      onChange={(e) => handleBringSlotChange('wine', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Appetizer</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={bringSlots.appetizer}
+                      onChange={(e) => handleBringSlotChange('appetizer', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Dessert</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={bringSlots.dessert}
+                      onChange={(e) => handleBringSlotChange('dessert', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-terracotta focus:border-terracotta"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </CollapsibleSection>
         </div>
 

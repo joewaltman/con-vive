@@ -25,6 +25,7 @@ interface BookingConfirmationEmailProps {
   googleCalendarUrl: string;
   outlookCalendarUrl: string;
   icsDownloadUrl: string;
+  venueType?: string;
 }
 
 export default function BookingConfirmationEmail({
@@ -41,8 +42,10 @@ export default function BookingConfirmationEmail({
   googleCalendarUrl,
   outlookCalendarUrl,
   icsDownloadUrl,
+  venueType = 'home',
 }: BookingConfirmationEmailProps) {
   const safeHostName = hostName || 'your host';
+  const isRestaurant = venueType === 'restaurant';
 
   return (
     <Html>
@@ -88,22 +91,24 @@ export default function BookingConfirmationEmail({
             )}
           </Section>
 
-          <Section style={detailsBox}>
-            <Text style={detailsHeading}>What to Bring</Text>
-            {bringItemAssignment && (
-              <Text style={highlightText}>
-                You signed up to bring: {bringItemAssignment}
-              </Text>
-            )}
-            {whatToBring && <Text style={detailsText}>{whatToBring}</Text>}
-            {bringItemsUrl && (
-              <Text style={detailsText}>
-                <Link href={bringItemsUrl} style={link}>
-                  Sign up to bring something
-                </Link>
-              </Text>
-            )}
-          </Section>
+          {!isRestaurant && (
+            <Section style={detailsBox}>
+              <Text style={detailsHeading}>What to Bring</Text>
+              {bringItemAssignment && (
+                <Text style={highlightText}>
+                  You signed up to bring: {bringItemAssignment}
+                </Text>
+              )}
+              {whatToBring && <Text style={detailsText}>{whatToBring}</Text>}
+              {bringItemsUrl && (
+                <Text style={detailsText}>
+                  <Link href={bringItemsUrl} style={link}>
+                    Sign up to bring something
+                  </Link>
+                </Text>
+              )}
+            </Section>
+          )}
 
           <Section style={calendarSection}>
             <Text style={detailsHeading}>Add to Calendar</Text>

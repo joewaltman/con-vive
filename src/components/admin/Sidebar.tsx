@@ -29,6 +29,7 @@ export default function Sidebar() {
     { name: 'Needs Attention', shortName: '!', href: '/admin/attention', active: pathname === '/admin/attention', badge: attentionCount },
     { name: 'Dinners', shortName: 'D', href: '/admin/dinners', active: pathname.startsWith('/admin/dinners') },
     { name: 'Hosts', shortName: 'H', href: '/admin/hosts', active: pathname === '/admin/hosts' },
+    { name: 'Restaurants', shortName: 'R', href: '/admin/restaurants', active: pathname === '/admin/restaurants' },
   ];
 
   const handleLogout = async () => {

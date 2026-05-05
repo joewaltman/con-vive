@@ -1,5 +1,5 @@
 import { pool } from '@/lib/db';
-import type { Dinner, DinnerFields, Host, HostFields, BringSlots, DinnerStatus, DinnerType } from '@/lib/types/admin';
+import type { Dinner, DinnerFields, Host, HostFields, Restaurant, RestaurantFields, BringSlots, DinnerStatus, DinnerType, VenueType } from '@/lib/types/admin';
 
 function rowToDinner(row: Record<string, unknown>): Dinner {
   const fields: DinnerFields = {};
@@ -34,6 +34,9 @@ function rowToDinner(row: Record<string, unknown>): Dinner {
   // Cal Alumni fields
   if (row.signup_source != null) fields['signup_source'] = String(row.signup_source);
   if (row.enforce_gender_balance != null) fields['enforce_gender_balance'] = Boolean(row.enforce_gender_balance);
+  // Venue fields
+  if (row.venue_type != null) fields['Venue Type'] = row.venue_type as VenueType;
+  if (row.restaurant_id != null) fields['Restaurant ID'] = Number(row.restaurant_id);
 
   const dinner: Dinner = {
     id: String(row.id),
@@ -51,6 +54,19 @@ function rowToDinner(row: Record<string, unknown>): Dinner {
     dinner.host = {
       id: String(row.host_id),
       fields: hostFields,
+    };
+  }
+
+  // Add restaurant info if joined
+  if (row.restaurant_name != null) {
+    const restaurantFields: RestaurantFields = {
+      'Name': String(row.restaurant_name),
+      'Address': row.restaurant_address ? String(row.restaurant_address) : undefined,
+      'City': row.restaurant_city ? String(row.restaurant_city) : undefined,
+    };
+    dinner.restaurant = {
+      id: String(row.restaurant_id),
+      fields: restaurantFields,
     };
   }
 
@@ -104,6 +120,9 @@ const fieldToColumn: Record<string, string> = {
   // Cal Alumni fields
   'signup_source': 'signup_source',
   'enforce_gender_balance': 'enforce_gender_balance',
+  // Venue fields
+  'Venue Type': 'venue_type',
+  'Restaurant ID': 'restaurant_id',
 };
 
 const DINNER_QUERY = `
@@ -112,9 +131,13 @@ const DINNER_QUERY = `
     h.last_name as host_last_name,
     h.address as host_address,
     h.city as host_city,
+    r.name as restaurant_name,
+    r.address as restaurant_address,
+    r.city as restaurant_city,
     (SELECT COUNT(*) FROM invitations i WHERE i.dinner_id = d.id AND (i.status = 'booked' OR i.response = 'Accepted')) as confirmed_count
   FROM dinners d
   LEFT JOIN hosts h ON h.id = d.host_id
+  LEFT JOIN restaurants r ON r.id = d.restaurant_id
 `;
 
 export async function fetchAllDinners(): Promise<Dinner[]> {
@@ -326,6 +349,30 @@ export async function fetchActiveHosts(): Promise<Host[]> {
     ORDER BY last_name, first_name
   `);
   return result.rows.map(rowToHost);
+}
+
+function rowToRestaurant(row: Record<string, unknown>): Restaurant {
+  const fields: RestaurantFields = {};
+
+  if (row.name != null) fields['Name'] = String(row.name);
+  if (row.address != null) fields['Address'] = String(row.address);
+  if (row.city != null) fields['City'] = String(row.city);
+  fields['Active'] = row.active !== false;
+
+  return {
+    id: String(row.id),
+    fields,
+  };
+}
+
+export async function fetchActiveRestaurants(): Promise<Restaurant[]> {
+  const result = await pool.query(`
+    SELECT id, name, address, city, active
+    FROM restaurants
+    WHERE active = true
+    ORDER BY name
+  `);
+  return result.rows.map(rowToRestaurant);
 }
 
 export async function deleteDinner(id: string): Promise<void> {
