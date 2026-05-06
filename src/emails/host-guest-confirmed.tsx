@@ -18,6 +18,9 @@ interface HostGuestConfirmedEmailProps {
   dinnerTime: string;
   confirmedCount: number;
   totalSeats: number;
+  isCoupleBooking?: boolean;
+  companionName?: string;
+  companionEmail?: string;
 }
 
 export default function HostGuestConfirmedEmail({
@@ -28,8 +31,17 @@ export default function HostGuestConfirmedEmail({
   dinnerTime,
   confirmedCount,
   totalSeats,
+  isCoupleBooking = false,
+  companionName,
+  companionEmail,
 }: HostGuestConfirmedEmailProps) {
   const safeHostName = hostName || 'Host';
+  const headline = isCoupleBooking ? "New Guests Confirmed!" : "New Guest Confirmed!";
+  const confirmMessage = isCoupleBooking
+    ? companionName
+      ? `Great news! ${guestName} and ${companionName} have confirmed their spots for your Con-Vive dinner.`
+      : `Great news! ${guestName} (+1) has confirmed their spot for your Con-Vive dinner.`
+    : `Great news! ${guestName} has confirmed their spot for your Con-Vive dinner.`;
 
   return (
     <Html>
@@ -37,24 +49,32 @@ export default function HostGuestConfirmedEmail({
       <Preview>{guestName} confirmed for your dinner on {dinnerDate}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>New Guest Confirmed!</Heading>
+          <Heading style={h1}>{headline}</Heading>
 
           <Text style={text}>
             Hi {safeHostName},
           </Text>
 
-          <Text style={text}>
-            Great news! <strong>{guestName}</strong> has confirmed their spot for your
-            Con-Vive dinner.
-          </Text>
+          <Text style={text}>{confirmMessage}</Text>
 
           <Section style={detailsBox}>
-            <Text style={detailsHeading}>Guest Info</Text>
+            <Text style={detailsHeading}>{isCoupleBooking ? "Guest Info" : "Guest Info"}</Text>
             <Text style={detailsText}>
               <strong>Name:</strong> {guestName}
               <br />
               <strong>Email:</strong> {guestEmail}
             </Text>
+            {isCoupleBooking && (
+              <Text style={detailsText}>
+                <strong>+1:</strong> {companionName || "Guest"}
+                {companionEmail && (
+                  <>
+                    <br />
+                    <strong>+1 Email:</strong> {companionEmail}
+                  </>
+                )}
+              </Text>
+            )}
           </Section>
 
           <Section style={detailsBox}>

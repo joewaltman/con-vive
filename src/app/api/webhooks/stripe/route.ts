@@ -40,6 +40,12 @@ interface GuestRow {
 
 interface InvitationRow {
   bring_item_slot: number | null;
+  is_couple_booking: boolean;
+  companion_first_name: string | null;
+  companion_last_name: string | null;
+  companion_email: string | null;
+  companion_gender: string | null;
+  companion_guest_id: number | null;
 }
 
 interface InvitationMatchRow {
@@ -273,7 +279,9 @@ async function handleBookingCheckoutCompleted(
   );
 
   const invitationDetails = await query<InvitationRow>(
-    `SELECT bring_item_slot FROM invitations WHERE id = $1`,
+    `SELECT bring_item_slot, is_couple_booking, companion_first_name, companion_last_name,
+            companion_email, companion_gender, companion_guest_id
+     FROM invitations WHERE id = $1`,
     [invitationId]
   );
 
@@ -372,6 +380,9 @@ async function handleBookingCheckoutCompleted(
         }),
       });
     } else {
+      const isCoupleBookingForEmail = invDetail?.is_couple_booking || false;
+      const companionNameForEmail = invDetail?.companion_first_name || undefined;
+
       const emailSubject = isRestaurant
         ? `You're in! Con-Vive Dinner at ${dinner.restaurant_name} on ${dinnerDate}`
         : `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`;
@@ -396,6 +407,8 @@ async function handleBookingCheckoutCompleted(
           venueType: dinner.venue_type || 'home',
           restaurantName: dinner.restaurant_name,
           menu: dinner.menu,
+          isCouple: isCoupleBookingForEmail,
+          companionName: companionNameForEmail,
         }),
       });
     }
@@ -414,13 +427,60 @@ async function handleBookingCheckoutCompleted(
     console.error("Error sending confirmation email:", emailError);
   }
 
+  // Send companion confirmation email if couple booking with companion email
+  const isCoupleBooking = invDetail?.is_couple_booking || false;
+  const companionEmail = invDetail?.companion_email;
+  const companionFirstName = invDetail?.companion_first_name;
+
+  if (isCoupleBooking && companionEmail) {
+    try {
+      const companionDisplayName = companionFirstName || "Guest";
+      const companionEmailSubject = isRestaurant
+        ? `You're in! Con-Vive Dinner at ${dinner.restaurant_name} on ${dinnerDate}`
+        : `You're in! ${hostName}'s Con-Vive Dinner on ${dinnerDate}`;
+
+      const companionEmailResult = await sendEmail({
+        to: companionEmail,
+        subject: companionEmailSubject,
+        react: BookingConfirmationEmail({
+          guestName: companionDisplayName,
+          dinnerDate,
+          dinnerTime,
+          hostName,
+          address: dinner.address || "Address will be sent separately",
+          googleMapsLink: dinner.google_maps_link,
+          parkingInstructions: dinner.parking_instructions,
+          whatToBring: isRestaurant ? null : dinner.what_to_bring,
+          bringItemAssignment: null, // Companion doesn't get bring item assignment
+          bringItemsUrl: null,
+          googleCalendarUrl,
+          outlookCalendarUrl,
+          icsDownloadUrl,
+          venueType: dinner.venue_type || 'home',
+          restaurantName: dinner.restaurant_name,
+          menu: dinner.menu,
+          isCouple: true,
+          companionName: guest.first_name, // Primary guest's name for "You're confirmed as X's +1"
+        }),
+      });
+
+      if (companionEmailResult.success) {
+        console.log("Companion confirmation email sent to:", companionEmail);
+      } else {
+        console.error("Failed to send companion confirmation email:", companionEmailResult.error);
+      }
+    } catch (companionEmailError) {
+      console.error("Error sending companion confirmation email:", companionEmailError);
+    }
+  }
+
   // Send host notification email
   if (dinner.host_email) {
     try {
-      // Get confirmed count and total seats
-      const statsResult = await query<{ confirmed_count: number; total_seats: number }>(
+      // Get confirmed count and total seats - count couple bookings as 2
+      const statsResult = await query<{ confirmed_count: string; total_seats: number }>(
         `SELECT
-          COUNT(*) FILTER (WHERE i.status = 'booked') as confirmed_count,
+          SUM(CASE WHEN i.is_couple_booking THEN 2 ELSE 1 END) FILTER (WHERE i.status = 'booked') as confirmed_count,
           COALESCE(d.total_seats, 8) as total_seats
          FROM invitations i
          JOIN dinners d ON d.id = i.dinner_id
@@ -429,20 +489,30 @@ async function handleBookingCheckoutCompleted(
         [dinnerId]
       );
 
-      const confirmedCount = statsResult?.[0]?.confirmed_count || 1;
+      const confirmedCount = Number(statsResult?.[0]?.confirmed_count) || (isCoupleBooking ? 2 : 1);
       const totalSeats = statsResult?.[0]?.total_seats || 8;
+
+      // Guest display name with +1 indicator for couple bookings
+      const guestDisplayName = isCoupleBooking
+        ? companionFirstName
+          ? `${guest.first_name} & ${companionFirstName}`
+          : `${guest.first_name} (+1)`
+        : guest.first_name;
 
       const hostEmailResult = await sendEmail({
         to: dinner.host_email,
-        subject: `${guest.first_name} confirmed for your dinner on ${dinnerDate}`,
+        subject: `${guestDisplayName} confirmed for your dinner on ${dinnerDate}`,
         react: HostGuestConfirmedEmail({
           hostName,
-          guestName: guest.first_name,
+          guestName: guestDisplayName,
           guestEmail: guest.email,
           dinnerDate,
           dinnerTime,
-          confirmedCount: Number(confirmedCount),
+          confirmedCount: confirmedCount,
           totalSeats: Number(totalSeats),
+          isCoupleBooking,
+          companionName: companionFirstName || undefined,
+          companionEmail: companionEmail || undefined,
         }),
       });
 

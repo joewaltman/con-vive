@@ -28,6 +28,8 @@ interface BookingConfirmationEmailProps {
   venueType?: string;
   restaurantName?: string | null;
   menu?: string | null;
+  isCouple?: boolean;
+  companionName?: string;
 }
 
 export default function BookingConfirmationEmail({
@@ -47,30 +49,45 @@ export default function BookingConfirmationEmail({
   venueType = 'home',
   restaurantName,
   menu,
+  isCouple = false,
+  companionName,
 }: BookingConfirmationEmailProps) {
   const safeHostName = hostName || 'your host';
   const isRestaurant = venueType === 'restaurant';
   const venueName = isRestaurant ? restaurantName : safeHostName;
 
+  // Determine the headline based on couple booking status
+  const headline = isCouple && companionName
+    ? `You're In, ${guestName}!` // Primary with named companion
+    : `You're In, ${guestName}!`;
+
+  // Confirmation message varies based on whether this is for primary or companion
+  const confirmationMessage = isCouple
+    ? companionName
+      ? `Your spot and ${companionName}'s at ${isRestaurant ? `the Con-Vive dinner at ${restaurantName}` : `${safeHostName}'s Con-Vive dinner`} is confirmed. We can't wait to see you both there.`
+      : `You're confirmed as ${companionName}'s +1 at ${isRestaurant ? `the Con-Vive dinner at ${restaurantName}` : `${safeHostName}'s Con-Vive dinner`}. We can't wait to see you there.`
+    : isRestaurant
+      ? `Your spot at the Con-Vive dinner at ${restaurantName} is confirmed. We can't wait to see you there.`
+      : `Your spot at ${safeHostName}'s Con-Vive dinner is confirmed. We can't wait to see you there.`;
+
+  // Preview text for email client
+  const previewText = isCouple
+    ? companionName
+      ? `You and ${companionName} are confirmed!`
+      : `You're confirmed as a +1!`
+    : isRestaurant
+      ? `Your spot at ${restaurantName} is confirmed!`
+      : `Your spot at ${safeHostName}'s dinner is confirmed!`;
+
   return (
     <Html>
       <Head />
-      <Preview>
-        {isRestaurant
-          ? `Your spot at ${restaurantName} is confirmed!`
-          : `Your spot at ${safeHostName}'s dinner is confirmed!`}
-      </Preview>
+      <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>You&apos;re In, {guestName}!</Heading>
+          <Heading style={h1}>{headline}</Heading>
 
-          <Text style={text}>
-            {isRestaurant ? (
-              <>Your spot at the Con-Vive dinner at {restaurantName} is confirmed. We can&apos;t wait to see you there.</>
-            ) : (
-              <>Your spot at {safeHostName}&apos;s Con-Vive dinner is confirmed. We can&apos;t wait to see you there.</>
-            )}
-          </Text>
+          <Text style={text}>{confirmationMessage}</Text>
 
           <Section style={detailsBox}>
             <Text style={detailsHeading}>Dinner Details</Text>

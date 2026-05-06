@@ -41,6 +41,7 @@ interface DinnerRow {
   host: string;
   venue_type: string | null;
   restaurant_name: string | null;
+  dinner_type: string | null;
 }
 
 interface BookedGuestRow {
@@ -95,7 +96,7 @@ export async function GET(
             COALESCE(d.total_seats, 8) as total_seats,
             d.address, d.google_maps_link, d.parking_instructions,
             d.what_to_bring, d.host_name, d.bring_items, d.menu, d.host,
-            d.venue_type, r.name as restaurant_name
+            d.venue_type, r.name as restaurant_name, d.dinner_type
      FROM dinners d
      LEFT JOIN restaurants r ON r.id = d.restaurant_id
      WHERE d.id = $1`,
@@ -128,6 +129,9 @@ export async function GET(
   const bringItems: BringItem[] = Array.isArray(dinner.bring_items)
     ? dinner.bring_items
     : [];
+
+  // Determine if couples are allowed (default to couples_allowed if not set)
+  const dinnerAllowsCouples = dinner.dinner_type !== 'singles_only';
 
   return NextResponse.json({
     invitation: {
@@ -162,5 +166,7 @@ export async function GET(
     genderCounts,
     canBook: constraint.allowed,
     blockReason: constraint.reason,
+    dinnerAllowsCouples,
+    couplePrice: dinner.price_cents * 2,
   });
 }

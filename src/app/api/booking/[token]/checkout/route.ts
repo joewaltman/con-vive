@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { stripe, getBaseUrl } from "@/lib/stripe";
 import {
   checkGenderConstraint,
+  checkCoupleGenderConstraint,
   getGenderCountsFromBookings,
 } from "@/lib/booking-constraints";
 
@@ -30,6 +31,22 @@ interface DinnerRow {
   dinner_date: string;
   price_cents: number;
   total_seats: number;
+  dinner_type: string | null;
+}
+
+interface CompanionInfo {
+  is_couple_booking: boolean;
+  companion_first_name?: string;
+  companion_last_name?: string;
+  companion_email?: string;
+  companion_gender?: string;
+}
+
+interface ExistingGuestRow {
+  id: number;
+  first_name: string;
+  last_name: string;
+  gender: string | null;
 }
 
 interface BookedGuestRow {
@@ -46,12 +63,22 @@ export async function POST(
     return NextResponse.json({ error: "Token is required" }, { status: 400 });
   }
 
-  // Parse optional bring_item_slot from request body
+  // Parse optional fields from request body
   let bringItemSlot: number | null = null;
+  let companionInfo: CompanionInfo = { is_couple_booking: false };
   try {
     const body = await request.json();
     if (body.bring_item_slot !== undefined) {
       bringItemSlot = body.bring_item_slot;
+    }
+    if (body.is_couple_booking) {
+      companionInfo = {
+        is_couple_booking: true,
+        companion_first_name: body.companion_first_name || undefined,
+        companion_last_name: body.companion_last_name || undefined,
+        companion_email: body.companion_email || undefined,
+        companion_gender: body.companion_gender || undefined,
+      };
     }
   } catch {
     // No body or invalid JSON is fine
@@ -142,7 +169,8 @@ export async function POST(
   const dinners = await query<DinnerRow>(
     `SELECT id, dinner_name, dinner_date,
             COALESCE(price_cents, 4000) as price_cents,
-            COALESCE(total_seats, 8) as total_seats
+            COALESCE(total_seats, 8) as total_seats,
+            dinner_type
      FROM dinners
      WHERE id = $1`,
     [invitation.dinner_id]
@@ -166,14 +194,64 @@ export async function POST(
   );
 
   const genderCounts = getGenderCountsFromBookings(bookedGuests || []);
-  const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.total_seats);
 
-  if (!constraint.allowed) {
-    return NextResponse.json(
-      { error: constraint.reason || "Cannot book at this time" },
-      { status: 400 }
+  // Validate couple booking request
+  const isCoupleBooking = companionInfo.is_couple_booking;
+  let companionGuestId: number | null = null;
+  let effectiveCompanionGender = companionInfo.companion_gender || null;
+
+  if (isCoupleBooking) {
+    // Check if dinner allows couples
+    if (dinner.dinner_type === 'singles_only') {
+      return NextResponse.json(
+        { error: "This dinner is for singles only. Couple bookings are not allowed." },
+        { status: 400 }
+      );
+    }
+
+    // If companion email provided, check for existing guest
+    if (companionInfo.companion_email) {
+      const existingCompanion = await query<ExistingGuestRow>(
+        `SELECT id, first_name, last_name, gender FROM guests WHERE email = $1`,
+        [companionInfo.companion_email.toLowerCase()]
+      );
+      if (existingCompanion?.length) {
+        companionGuestId = existingCompanion[0].id;
+        // Use their gender from profile if not provided
+        if (!effectiveCompanionGender && existingCompanion[0].gender) {
+          effectiveCompanionGender = existingCompanion[0].gender;
+        }
+      }
+    }
+
+    // Check couple gender constraint (validates 2 seats available and both genders)
+    const coupleConstraint = checkCoupleGenderConstraint(
+      genderCounts,
+      guest.gender,
+      effectiveCompanionGender,
+      dinner.total_seats
     );
+
+    if (!coupleConstraint.allowed) {
+      return NextResponse.json(
+        { error: coupleConstraint.reason || "Cannot complete couple booking at this time" },
+        { status: 400 }
+      );
+    }
+  } else {
+    // Standard single booking constraint check
+    const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.total_seats);
+
+    if (!constraint.allowed) {
+      return NextResponse.json(
+        { error: constraint.reason || "Cannot book at this time" },
+        { status: 400 }
+      );
+    }
   }
+
+  // Calculate price (doubled for couple booking)
+  const totalPrice = isCoupleBooking ? dinner.price_cents * 2 : dinner.price_cents;
 
   // Format dinner date for display
   const dinnerDate = new Date(dinner.dinner_date).toLocaleDateString("en-US", {
@@ -186,6 +264,14 @@ export async function POST(
   const baseUrl = getBaseUrl();
 
   try {
+    // Build product description based on booking type
+    const productName = isCoupleBooking
+      ? `Con-Vive Dinner (2 guests) - ${dinnerDate}`
+      : `Con-Vive Dinner - ${dinnerDate}`;
+    const productDescription = isCoupleBooking
+      ? `Dinner for two at ${dinner.dinner_name}`
+      : `Dinner at ${dinner.dinner_name}`;
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -194,10 +280,10 @@ export async function POST(
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Con-Vive Dinner - ${dinnerDate}`,
-              description: `Dinner at ${dinner.dinner_name}`,
+              name: productName,
+              description: productDescription,
             },
-            unit_amount: dinner.price_cents,
+            unit_amount: totalPrice,
           },
           quantity: 1,
         },
@@ -211,25 +297,39 @@ export async function POST(
         guest_id: invitation.guest_id.toString(),
         token: token,
         bring_item_slot: bringItemSlot?.toString() || "",
+        is_couple_booking: isCoupleBooking ? "true" : "false",
       },
     });
 
-    // Update invitation with checkout session ID and append to attempts array
+    // Update invitation with checkout session ID, companion info, and append to attempts array
     await query(
       `UPDATE invitations
        SET stripe_checkout_session_id = $1,
            bring_item_slot = $2,
-           stripe_checkout_attempts = COALESCE(stripe_checkout_attempts, '[]'::jsonb) || $4::jsonb,
+           is_couple_booking = $4,
+           companion_first_name = $5,
+           companion_last_name = $6,
+           companion_email = $7,
+           companion_gender = $8,
+           companion_guest_id = $9,
+           stripe_checkout_attempts = COALESCE(stripe_checkout_attempts, '[]'::jsonb) || $10::jsonb,
            updated_at = NOW()
        WHERE id = $3`,
       [
         session.id,
         bringItemSlot,
         invitation.id,
+        isCoupleBooking,
+        companionInfo.companion_first_name || null,
+        companionInfo.companion_last_name || null,
+        companionInfo.companion_email || null,
+        effectiveCompanionGender || null,
+        companionGuestId,
         JSON.stringify({
           session_id: session.id,
           created_at: new Date().toISOString(),
-          amount_cents: dinner.price_cents,
+          amount_cents: totalPrice,
+          is_couple_booking: isCoupleBooking,
         }),
       ]
     );

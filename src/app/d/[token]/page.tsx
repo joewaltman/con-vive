@@ -46,6 +46,8 @@ interface BookingData {
   };
   canBook: boolean;
   blockReason: string | null;
+  dinnerAllowsCouples: boolean;
+  couplePrice: number;
 }
 
 function formatDate(dateStr: string): string {
@@ -77,6 +79,11 @@ export default function BookingPage({
   const [selectedBringSlot, setSelectedBringSlot] = useState<number | null>(
     null
   );
+  const [isCoupleBooking, setIsCoupleBooking] = useState(false);
+  const [companionFirstName, setCompanionFirstName] = useState("");
+  const [companionLastName, setCompanionLastName] = useState("");
+  const [companionEmail, setCompanionEmail] = useState("");
+  const [companionGender, setCompanionGender] = useState("");
 
   useEffect(() => {
     async function fetchData() {
@@ -135,10 +142,22 @@ export default function BookingPage({
     setCheckingOut(true);
 
     try {
+      const requestBody: Record<string, unknown> = {
+        bring_item_slot: selectedBringSlot,
+      };
+
+      if (isCoupleBooking) {
+        requestBody.is_couple_booking = true;
+        if (companionFirstName) requestBody.companion_first_name = companionFirstName;
+        if (companionLastName) requestBody.companion_last_name = companionLastName;
+        if (companionEmail) requestBody.companion_email = companionEmail;
+        if (companionGender) requestBody.companion_gender = companionGender;
+      }
+
       const response = await fetch(`/api/booking/${token}/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bring_item_slot: selectedBringSlot }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
@@ -206,7 +225,10 @@ export default function BookingPage({
     );
   }
 
-  const { invitation, dinner, guest, canBook, blockReason } = data;
+  const { invitation, dinner, guest, canBook, blockReason, dinnerAllowsCouples, couplePrice } = data;
+
+  // Calculate the booking price based on couple booking selection
+  const bookingPrice = isCoupleBooking ? couplePrice : dinner.price_cents;
 
   // Already booked
   if (invitation.status === "booked") {
@@ -360,6 +382,108 @@ export default function BookingPage({
           </div>
         )}
 
+        {/* Couple Booking Section - only if dinner allows couples */}
+        {dinnerAllowsCouples && (
+          <div className="mt-6 rounded-xl border border-border bg-white p-6">
+            <h2 className="heading-2 text-charcoal">Booking for Two?</h2>
+            <p className="body-sm mt-2 text-warm-gray">
+              Want to bring a +1? Toggle this on to book for both of you.
+            </p>
+
+            {/* Toggle */}
+            <div className="mt-4">
+              <button
+                onClick={() => setIsCoupleBooking(!isCoupleBooking)}
+                className={`flex w-full items-center justify-between rounded-lg border-2 p-4 transition-colors ${
+                  isCoupleBooking
+                    ? "border-terracotta bg-terracotta/5"
+                    : "border-border hover:border-charcoal/30"
+                }`}
+              >
+                <span className="body-base font-medium text-charcoal">
+                  Yes, add a +1
+                </span>
+                <div
+                  className={`h-6 w-11 rounded-full transition-colors ${
+                    isCoupleBooking ? "bg-terracotta" : "bg-gray-300"
+                  }`}
+                >
+                  <div
+                    className={`h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      isCoupleBooking ? "translate-x-5" : "translate-x-0.5"
+                    } mt-0.5`}
+                  />
+                </div>
+              </button>
+            </div>
+
+            {/* Companion Details Form - shown when couple booking is enabled */}
+            {isCoupleBooking && (
+              <div className="mt-4 space-y-4 border-t border-border pt-4">
+                <p className="body-sm text-warm-gray">
+                  Optional: Help us know your +1
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="body-sm font-medium text-charcoal">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={companionFirstName}
+                      onChange={(e) => setCompanionFirstName(e.target.value)}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-charcoal placeholder:text-warm-gray/50 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                    />
+                  </div>
+                  <div>
+                    <label className="body-sm font-medium text-charcoal">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={companionLastName}
+                      onChange={(e) => setCompanionLastName(e.target.value)}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-charcoal placeholder:text-warm-gray/50 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="body-sm font-medium text-charcoal">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={companionEmail}
+                    onChange={(e) => setCompanionEmail(e.target.value)}
+                    placeholder="Optional - they'll receive a confirmation email"
+                    className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-charcoal placeholder:text-warm-gray/50 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                  />
+                </div>
+
+                <div>
+                  <label className="body-sm font-medium text-charcoal">
+                    Gender
+                  </label>
+                  <select
+                    value={companionGender}
+                    onChange={(e) => setCompanionGender(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-charcoal focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                  >
+                    <option value="">Optional</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other / Non-binary</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Bring Items Selection - only for home dinners */}
         {dinner.venue_type !== 'restaurant' && availableBringSlots.length > 0 && (
           <div className="mt-6 rounded-xl border border-border bg-white p-6">
@@ -407,7 +531,9 @@ export default function BookingPage({
           >
             {checkingOut
               ? "Redirecting..."
-              : `Book My Spot - ${formatPrice(dinner.price_cents)}`}
+              : isCoupleBooking
+                ? `Book for Two - ${formatPrice(bookingPrice)}`
+                : `Book My Spot - ${formatPrice(bookingPrice)}`}
           </button>
           {!canBook && (
             <p className="body-sm mt-3 text-center text-warm-gray">
