@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import {
   checkGenderConstraint,
-  getGenderCountsFromBookings,
+  getGenderCountsFromBookingsWithCompanions,
 } from "@/lib/booking-constraints";
 import type { BringItem } from "@/lib/types/booking";
 
@@ -46,6 +46,8 @@ interface DinnerRow {
 
 interface BookedGuestRow {
   gender: string | null;
+  is_couple_booking: boolean;
+  companion_gender: string | null;
 }
 
 export async function GET(
@@ -109,9 +111,9 @@ export async function GET(
 
   const dinner = dinners[0];
 
-  // Get gender counts from already booked guests
+  // Get gender counts from already booked guests (including companions for couple bookings)
   const bookedGuests = await query<BookedGuestRow>(
-    `SELECT g.gender
+    `SELECT g.gender, i.is_couple_booking, i.companion_gender
      FROM invitations i
      JOIN guests g ON i.guest_id = g.id
      WHERE i.dinner_id = $1
@@ -120,7 +122,8 @@ export async function GET(
     [invitation.dinner_id, invitation.id]
   );
 
-  const genderCounts = getGenderCountsFromBookings(bookedGuests || []);
+  // Count genders including companions from couple bookings
+  const genderCounts = getGenderCountsFromBookingsWithCompanions(bookedGuests || []);
 
   // Check if this guest can book
   const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.total_seats);

@@ -4,7 +4,7 @@ import { stripe, getBaseUrl } from "@/lib/stripe";
 import {
   checkGenderConstraint,
   checkCoupleGenderConstraint,
-  getGenderCountsFromBookings,
+  getGenderCountsFromBookingsWithCompanions,
 } from "@/lib/booking-constraints";
 
 interface InvitationRow {
@@ -51,6 +51,8 @@ interface ExistingGuestRow {
 
 interface BookedGuestRow {
   gender: string | null;
+  is_couple_booking: boolean;
+  companion_gender: string | null;
 }
 
 export async function POST(
@@ -182,9 +184,9 @@ export async function POST(
 
   const dinner = dinners[0];
 
-  // Check gender constraint
+  // Check gender constraint (including companions from couple bookings)
   const bookedGuests = await query<BookedGuestRow>(
-    `SELECT g.gender
+    `SELECT g.gender, i.is_couple_booking, i.companion_gender
      FROM invitations i
      JOIN guests g ON i.guest_id = g.id
      WHERE i.dinner_id = $1
@@ -193,7 +195,7 @@ export async function POST(
     [invitation.dinner_id, invitation.id]
   );
 
-  const genderCounts = getGenderCountsFromBookings(bookedGuests || []);
+  const genderCounts = getGenderCountsFromBookingsWithCompanions(bookedGuests || []);
 
   // Validate couple booking request
   const isCoupleBooking = companionInfo.is_couple_booking;

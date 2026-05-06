@@ -88,6 +88,49 @@ export function getGenderCountsFromBookings(
 }
 
 /**
+ * Count genders including companions from couple bookings.
+ * For couple bookings, counts the primary guest AND the companion (if gender known).
+ * If companion gender is unknown, still counts them as 1 person in "other" for capacity purposes.
+ */
+export function getGenderCountsFromBookingsWithCompanions(
+  bookedGuests: Array<{
+    gender: string | null;
+    is_couple_booking: boolean;
+    companion_gender: string | null;
+  }>
+): GenderCounts {
+  return bookedGuests.reduce(
+    (counts, guest) => {
+      // Count primary guest
+      const gender = guest.gender?.toLowerCase();
+      if (gender === "male") {
+        counts.male++;
+      } else if (gender === "female") {
+        counts.female++;
+      } else if (gender) {
+        counts.other++;
+      }
+
+      // Count companion if couple booking
+      if (guest.is_couple_booking) {
+        const companionGender = guest.companion_gender?.toLowerCase();
+        if (companionGender === "male") {
+          counts.male++;
+        } else if (companionGender === "female") {
+          counts.female++;
+        } else {
+          // Unknown companion gender still takes a seat
+          counts.other++;
+        }
+      }
+
+      return counts;
+    },
+    { male: 0, female: 0, other: 0 }
+  );
+}
+
+/**
  * Check if a couple booking is allowed based on gender constraints.
  * This checks that:
  * 1. 2 seats are available
