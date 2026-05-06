@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import useSWR, { mutate } from 'swr';
 import Sidebar from '@/components/admin/Sidebar';
 import ShortlistTable from '@/components/admin/ShortlistTable';
+import GuestSearch from '@/components/admin/GuestSearch';
 import Toast from '@/components/admin/Toast';
 import type { ShortlistGuest } from '@/lib/types/admin';
 
@@ -154,6 +155,13 @@ export default function ShortlistPage() {
             </div>
           </div>
         </div>
+
+        {/* Guest Search */}
+        <GuestSearch
+          dinnerId={dinnerId}
+          onInvite={handleSendInvites}
+          isSending={isSending}
+        />
 
         {/* Shortlist Table */}
         <ShortlistTable
