@@ -188,7 +188,7 @@ async function main() {
         );
 
         const { error } = await resend.emails.send({
-          from: "Joe from Con-Vive <joe@con-vive.com>",
+          from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
           subject: `Thanks for joining ${hostName}'s dinner!`,
           html: buildPostDinnerEmailHtml(invitation.first_name, hostName, dinnerDate),

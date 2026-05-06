@@ -235,7 +235,7 @@ async function main() {
 
       try {
         const { error } = await resend.emails.send({
-          from: "Joe from Con-Vive <joe@con-vive.com>",
+          from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
           subject: `Reminder: ${hostName}'s dinner is tomorrow!`,
           html: buildReminderEmailHtml(invitation),
