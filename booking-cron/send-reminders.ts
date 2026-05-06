@@ -21,7 +21,9 @@ interface BookedInvitation {
   host_name: string | null;
   host: string;
   bring_item_slot: number | null;
-  bring_items: Array<{ slot: number; name: string }> | null;
+  bring_items: Array<{ slot: number; name: string; claimed_by_guest_id: number | null }> | null;
+  token: string;
+  venue_type: string | null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -67,6 +69,9 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
   const hostName = invitation.host_name || invitation.host;
   const dinnerDate = formatDate(invitation.dinner_date);
   const dinnerTime = invitation.dinner_time || "7:00 PM";
+  const isRestaurant = invitation.venue_type === 'restaurant';
+  const baseUrl = process.env.BASE_URL || 'https://con-vive.com';
+  const bringItemsUrl = `${baseUrl}/bring/${invitation.token}`;
 
   let bringItemName: string | null = null;
   if (invitation.bring_item_slot && Array.isArray(invitation.bring_items)) {
@@ -75,6 +80,14 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
     );
     bringItemName = item?.name || null;
   }
+
+  // Check if there are available (unclaimed) bring items
+  const hasAvailableBringItems = !isRestaurant &&
+    Array.isArray(invitation.bring_items) &&
+    invitation.bring_items.some(item => !item.claimed_by_guest_id);
+
+  // Show sign-up link if guest hasn't claimed an item and there are available items
+  const showBringItemsLink = !bringItemName && hasAvailableBringItems;
 
   return `
 <!DOCTYPE html>
@@ -116,12 +129,13 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
     }
 
     ${
-      bringItemName || invitation.what_to_bring
+      bringItemName || invitation.what_to_bring || showBringItemsLink
         ? `
     <div style="background-color: #fff8f5; border: 2px solid #c75d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Don't Forget!</p>
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">${bringItemName ? "Don't Forget!" : "Want to Bring Something?"}</p>
       ${bringItemName ? `<p style="color: #c75d3a; font-size: 16px; font-weight: 600; margin: 0 0 8px;">You signed up to bring: ${bringItemName}</p>` : ""}
-      ${invitation.what_to_bring ? `<p style="color: #2d2d2d; font-size: 16px; margin: 0;">${invitation.what_to_bring}</p>` : ""}
+      ${invitation.what_to_bring ? `<p style="color: #2d2d2d; font-size: 16px; margin: 0 0 8px;">${invitation.what_to_bring}</p>` : ""}
+      ${showBringItemsLink ? `<p style="color: #2d2d2d; font-size: 16px; margin: 0;"><a href="${bringItemsUrl}" style="color: #c75d3a; font-weight: 600;">Sign up to bring something</a></p>` : ""}
     </div>
     `
         : ""
@@ -179,7 +193,9 @@ async function main() {
         d.host_name,
         d.host,
         i.bring_item_slot,
-        d.bring_items
+        d.bring_items,
+        i.token,
+        d.venue_type
       FROM invitations i
       JOIN guests g ON i.guest_id = g.id
       JOIN dinners d ON i.dinner_id = d.id
