@@ -134,7 +134,7 @@ const DINNER_QUERY = `
     r.name as restaurant_name,
     r.address as restaurant_address,
     r.city as restaurant_city,
-    (SELECT COUNT(*) FROM invitations i WHERE i.dinner_id = d.id AND (i.status = 'booked' OR i.response = 'Accepted')) as confirmed_count
+    (SELECT COALESCE(SUM(CASE WHEN i.is_couple_booking THEN 2 ELSE 1 END), 0) FROM invitations i WHERE i.dinner_id = d.id AND (i.status = 'booked' OR i.response = 'Accepted')) as confirmed_count
   FROM dinners d
   LEFT JOIN hosts h ON h.id = d.host_id
   LEFT JOIN restaurants r ON r.id = d.restaurant_id
