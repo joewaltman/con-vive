@@ -14,6 +14,7 @@ interface BookedInvitation {
   dinner_date: string;
   host_name: string | null;
   host: string;
+  token: string;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -58,7 +59,8 @@ function formatDate(dateStr: string): string {
 function buildPostDinnerEmailHtml(
   firstName: string,
   hostName: string,
-  dinnerDate: string
+  dinnerDate: string,
+  feedbackUrl: string
 ): string {
   return `
 <!DOCTYPE html>
@@ -74,6 +76,14 @@ function buildPostDinnerEmailHtml(
     <p style="color: #6b6b6b; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
       We hope you had a wonderful time at ${hostName}'s dinner on ${dinnerDate}. Sharing meals with new people is what Con-Vive is all about.
     </p>
+
+    <div style="background-color: #fff8f5; border: 2px solid #c75d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Share Your Feedback</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+        We'd love to hear how it went! Take a moment to let us know who you'd like to dine with again.
+      </p>
+      <a href="${feedbackUrl}" style="display: inline-block; background-color: #c75d3a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 14px;">Share Feedback</a>
+    </div>
 
     <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
       <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Stay Connected</p>
@@ -93,13 +103,6 @@ function buildPostDinnerEmailHtml(
       <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Become a Host</p>
       <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
         Loved being a guest? Try hosting! Open your home for a Con-Vive dinner and we'll handle the rest — matching guests, managing RSVPs, and sending reminders. You just cook and enjoy the company. Reply to this email if you're interested.
-      </p>
-    </div>
-
-    <div style="background-color: #fff8f5; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">We'd Love Your Feedback</p>
-      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
-        How was your experience? Just reply to this email and let us know what you thought. Your feedback helps us make Con-Vive even better.
       </p>
     </div>
 
@@ -147,7 +150,8 @@ async function main() {
         i.dinner_id,
         d.dinner_date,
         d.host_name,
-        d.host
+        d.host,
+        i.token
       FROM invitations i
       JOIN guests g ON i.guest_id = g.id
       JOIN dinners d ON i.dinner_id = d.id
@@ -194,11 +198,14 @@ async function main() {
           [invitation.invitation_id]
         );
 
+        const baseUrl = process.env.BASE_URL || 'https://con-vive.com';
+        const feedbackUrl = `${baseUrl}/feedback/${invitation.token}`;
+
         const { error } = await resend.emails.send({
           from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
           subject: `Thanks for joining ${hostName}'s dinner!`,
-          html: buildPostDinnerEmailHtml(invitation.first_name, hostName, dinnerDate),
+          html: buildPostDinnerEmailHtml(invitation.first_name, hostName, dinnerDate, feedbackUrl),
           replyTo: "joe@con-vive.com",
         });
 
