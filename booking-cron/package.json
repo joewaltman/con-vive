@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "echo 'No build required'",
-    "start": "echo 'Use send-reminders or send-post-dinner scripts'",
+    "start": "npx tsx run-all.ts",
     "send-reminders": "npx tsx send-reminders.ts",
     "send-reminders:dry-run": "npx tsx send-reminders.ts --dry-run",
     "send-post-dinner": "npx tsx send-post-dinner.ts",

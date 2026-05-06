@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npx tsx run-all.ts"
+# Run daily at 9:00 AM Pacific (16:00 UTC)
+cronSchedule = "0 16 * * *"
