@@ -29,7 +29,7 @@ interface DinnerRow {
   dinner_name: string;
   dinner_date: string;
   price_cents: number;
-  capacity: number;
+  total_seats: number;
 }
 
 interface BookedGuestRow {
@@ -142,7 +142,7 @@ export async function POST(
   const dinners = await query<DinnerRow>(
     `SELECT id, dinner_name, dinner_date,
             COALESCE(price_cents, 4000) as price_cents,
-            COALESCE(capacity, 6) as capacity
+            COALESCE(total_seats, 8) as total_seats
      FROM dinners
      WHERE id = $1`,
     [invitation.dinner_id]
@@ -166,7 +166,7 @@ export async function POST(
   );
 
   const genderCounts = getGenderCountsFromBookings(bookedGuests || []);
-  const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.capacity);
+  const constraint = checkGenderConstraint(genderCounts, guest.gender, dinner.total_seats);
 
   if (!constraint.allowed) {
     return NextResponse.json(
