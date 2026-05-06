@@ -89,6 +89,13 @@ function buildPostDinnerEmailHtml(
       </p>
     </div>
 
+    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Become a Host</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
+        Loved being a guest? Try hosting! Open your home for a Con-Vive dinner and we'll handle the rest — matching guests, managing RSVPs, and sending reminders. You just cook and enjoy the company. Reply to this email if you're interested.
+      </p>
+    </div>
+
     <div style="background-color: #fff8f5; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
       <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">We'd Love Your Feedback</p>
       <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
