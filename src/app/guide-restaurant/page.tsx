@@ -182,7 +182,33 @@ export default function RestaurantGuidePage() {
           <h2>The Bill</h2>
           <ul>
             <li>Your food is prepaid through Con-Vive, gratuity included.</li>
-            <li>Drinks are on your own tab. Some restaurants will split drink checks individually; others will split evenly across the table. Go with the flow.</li>
+            <li>Drinks are on your own tab. Some restaurants will run separate tabs per guest; others will put all drinks on one tab. If it&apos;s one tab, be reasonable about paying your share based on what you actually drank.</li>
+          </ul>
+        </section>
+
+        <section className="guide-section">
+          <h2>Wrapping Up</h2>
+          <ul>
+            <li>Thank your server on the way out.</li>
+            <li>Restaurants often need to turn the table — don&apos;t be the last one lingering.</li>
+          </ul>
+        </section>
+
+        <section className="guide-section">
+          <h2>After the Dinner</h2>
+          <ul>
+            <li>All guests will be added to a group text after the dinner to stay connected. If you&apos;d prefer not to be included, let Joe know within 24 hours of the dinner.</li>
+            <li>If the restaurant nailed it, leave them a Google review — they&apos;re partnering with us and it helps.</li>
+            <li>Share feedback with Con-Vive on what you loved or what could be better.</li>
+          </ul>
+        </section>
+
+        <section className="guide-section">
+          <h2>The Vibe We&apos;re Going For</h2>
+          <ul>
+            <li>Drink at a pace that keeps the conversation good.</li>
+            <li>Be kind to the restaurant staff — they&apos;re part of the evening too.</li>
+            <li>This isn&apos;t networking and it&apos;s not a party. It&apos;s a table full of curious people sharing a meal.</li>
           </ul>
         </section>
 
