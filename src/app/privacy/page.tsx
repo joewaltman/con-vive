@@ -94,7 +94,7 @@ export default function TermsAndPrivacy() {
 
         <h3 className="heading-3 mb-4 mt-8 text-charcoal">5. Fees and Payments</h3>
         <p className="body-base mb-6">
-          The current participation fee is $40 per person per dinner. In addition, guests are
+          Participation fees vary by dinner and are shown on your booking page. In addition, guests are
           typically asked to bring a contribution to the meal — a bottle of wine, an appetizer, or a
           dessert. Fees are non-refundable except as described below.
         </p>

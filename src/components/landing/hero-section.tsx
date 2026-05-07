@@ -21,7 +21,7 @@ export function HeroSection() {
           Join Our Next Dinner
         </a>
         <p className="hero-animate hero-animate-delay-2 body-sm mt-4 text-warm-gray">
-          $40 per person &middot; Encinitas &middot; Small groups of 6&ndash;8
+          Encinitas &middot; Small groups of 6&ndash;8
         </p>
       </div>
     </section>

@@ -2,7 +2,7 @@ const faqs = [
   {
     question: "How much does it cost?",
     answer:
-      "$40 per person for the evening. You\u2019ll also bring a contribution to the meal \u2014 usually a bottle of wine, an appetizer, or a dessert. Think of it as a dinner party, not a restaurant.",
+      "Prices vary by dinner. You\u2019ll also bring a contribution to the meal \u2014 usually a bottle of wine, an appetizer, or a dessert. Think of it as a dinner party, not a restaurant.",
   },
   {
     question: "Who are the other guests?",
