@@ -24,6 +24,17 @@ interface BookedInvitation {
   bring_items: Array<{ slot: number; name: string; claimed_by_guest_id: number | null }> | null;
   token: string;
   venue_type: string | null;
+  restaurant_name: string | null;
+}
+
+interface DinnerGuest {
+  guest_id: number;
+  first_name: string;
+  one_thing: string | null;
+  about: string | null;
+  what_do_you_do: string | null;
+  curious_about: string | null;
+  surprising_knowledge: string | null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -65,13 +76,91 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function buildReminderEmailHtml(invitation: BookedInvitation): string {
-  const hostName = invitation.host_name || invitation.host;
-  const dinnerDate = formatDate(invitation.dinner_date);
-  const dinnerTime = invitation.dinner_time || "7:00 PM";
+function getDayOfWeek(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * Generate a one-liner from guest's free text fields.
+ * Prioritizes fields and truncates to ~120 chars.
+ */
+function generateOneLiner(guest: DinnerGuest): string {
+  // Try fields in order of preference
+  const sources = [
+    guest.what_do_you_do,
+    guest.about,
+    guest.one_thing,
+    guest.curious_about,
+    guest.surprising_knowledge,
+  ];
+
+  for (const source of sources) {
+    if (source && source.trim().length > 0) {
+      let text = source.trim();
+
+      // Take first sentence if multiple
+      const firstSentence = text.match(/^[^.!?]+[.!?]?/);
+      if (firstSentence && firstSentence[0].length > 20) {
+        text = firstSentence[0].trim();
+      }
+
+      // Truncate if still too long
+      if (text.length > 120) {
+        text = text.substring(0, 117).trim() + "...";
+      }
+
+      // Clean up - remove leading numbers/parentheses like "(1)"
+      text = text.replace(/^\([0-9]+\)\s*/, "").trim();
+
+      return text;
+    }
+  }
+
+  return "Excited to meet everyone!";
+}
+
+function buildGuestListHtml(guests: DinnerGuest[], currentGuestId: number): string {
+  const otherGuests = guests.filter(g => g.guest_id !== currentGuestId);
+
+  if (otherGuests.length === 0) {
+    return "";
+  }
+
+  const guestItems = otherGuests.map(guest => {
+    const oneLiner = generateOneLiner(guest);
+    return `
+      <div style="margin-bottom: 12px;">
+        <p style="color: #2d2d2d; font-size: 16px; font-weight: 600; margin: 0;">${guest.first_name}</p>
+        <p style="color: #6b6b6b; font-size: 14px; margin: 4px 0 0; line-height: 1.4;">${oneLiner}</p>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px;">Your Dining Companions</p>
+      ${guestItems}
+    </div>
+  `;
+}
+
+function buildReminderEmailHtml(
+  invitation: BookedInvitation,
+  dinnerGuests: DinnerGuest[]
+): string {
   const isRestaurant = invitation.venue_type === 'restaurant';
+  const hostName = invitation.host_name || invitation.host;
+  const restaurantName = invitation.restaurant_name || invitation.dinner_name;
+  const dinnerDate = formatDate(invitation.dinner_date);
+  const dayOfWeek = getDayOfWeek(invitation.dinner_date);
+  const dinnerTime = invitation.dinner_time || "7:00 PM";
   const baseUrl = process.env.BASE_URL || 'https://con-vive.com';
   const bringItemsUrl = `${baseUrl}/bring/${invitation.token}`;
+  const restaurantGuideUrl = `${baseUrl}/guide-restaurant`;
 
   let bringItemName: string | null = null;
   if (invitation.bring_item_slot && Array.isArray(invitation.bring_items)) {
@@ -89,6 +178,50 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
   // Show sign-up link if guest hasn't claimed an item and there are available items
   const showBringItemsLink = !bringItemName && hasAvailableBringItems;
 
+  // Build guest list HTML
+  const guestListHtml = buildGuestListHtml(dinnerGuests, invitation.guest_id);
+
+  // Different intro for restaurant vs home dinners
+  const introText = isRestaurant
+    ? `Just a friendly reminder that your Con-Vive dinner at <strong>${restaurantName}</strong> is this ${dayOfWeek}. Here's everything you need to know:`
+    : `Just a friendly reminder that ${hostName}'s Con-Vive dinner is this ${dayOfWeek}. Here's everything you need to know:`;
+
+  // Different details section for restaurant vs home
+  const detailsSection = isRestaurant
+    ? `
+    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Dinner Details</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
+        <strong>Date:</strong> ${dinnerDate}<br>
+        <strong>Time:</strong> ${dinnerTime}<br>
+        <strong>Restaurant:</strong> ${restaurantName}
+      </p>
+    </div>
+    `
+    : `
+    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Dinner Details</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
+        <strong>Date:</strong> ${dinnerDate}<br>
+        <strong>Time:</strong> ${dinnerTime}<br>
+        <strong>Host:</strong> ${hostName}
+      </p>
+    </div>
+    `;
+
+  // Restaurant guide section (only for restaurant dinners)
+  const restaurantGuideSection = isRestaurant
+    ? `
+    <div style="background-color: #fff8f5; border: 2px solid #c75d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">First Restaurant Dinner?</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0 0 12px;">
+        Check out our quick guide for what to expect and how to make the most of your evening.
+      </p>
+      <a href="${restaurantGuideUrl}" style="display: inline-block; background-color: #c75d3a; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px;">Read the Guide</a>
+    </div>
+    `
+    : "";
+
   return `
 <!DOCTYPE html>
 <html>
@@ -101,17 +234,10 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
     <h1 style="color: #2d2d2d; font-size: 28px; margin: 0 0 20px;">See You Soon, ${invitation.first_name}!</h1>
 
     <p style="color: #6b6b6b; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-      Just a friendly reminder that ${hostName}'s Con-Vive dinner is coming up. Here's everything you need to know:
+      ${introText}
     </p>
 
-    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Dinner Details</p>
-      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
-        <strong>Date:</strong> ${dinnerDate}<br>
-        <strong>Time:</strong> ${dinnerTime}<br>
-        <strong>Host:</strong> ${hostName}
-      </p>
-    </div>
+    ${detailsSection}
 
     ${
       invitation.address
@@ -127,6 +253,10 @@ function buildReminderEmailHtml(invitation: BookedInvitation): string {
     `
         : ""
     }
+
+    ${guestListHtml}
+
+    ${restaurantGuideSection}
 
     ${
       bringItemName || invitation.what_to_bring || showBringItemsLink
@@ -174,7 +304,7 @@ async function main() {
     console.log("Connected to database.");
 
     // Find booked invitations where:
-    // - dinner is 48 hours away (between 47-49 hours to account for cron timing)
+    // - dinner is within 2 days
     // - reminder_email_sent_at is NULL
     const { rows: invitations } = await pool.query<BookedInvitation>(`
       SELECT
@@ -195,10 +325,12 @@ async function main() {
         i.bring_item_slot,
         d.bring_items,
         i.token,
-        d.venue_type
+        d.venue_type,
+        r.name as restaurant_name
       FROM invitations i
       JOIN guests g ON i.guest_id = g.id
       JOIN dinners d ON i.dinner_id = d.id
+      LEFT JOIN restaurants r ON r.id = d.restaurant_id
       WHERE i.status = 'booked'
         AND i.reminder_email_sent_at IS NULL
         AND d.dinner_date >= CURRENT_DATE
@@ -214,31 +346,75 @@ async function main() {
       return;
     }
 
+    // Get unique dinner IDs to fetch all guests for each dinner
+    const dinnerIds = [...new Set(invitations.map(i => i.dinner_id))];
+
+    // Fetch all confirmed guests for these dinners with their profile info
+    const { rows: allDinnerGuests } = await pool.query<DinnerGuest & { dinner_id: number }>(`
+      SELECT
+        i.dinner_id,
+        i.guest_id,
+        g.first_name,
+        g.one_thing,
+        g.about,
+        g.what_do_you_do,
+        g.curious_about,
+        g.surprising_knowledge
+      FROM invitations i
+      JOIN guests g ON i.guest_id = g.id
+      WHERE i.dinner_id = ANY($1)
+        AND i.status = 'booked'
+      ORDER BY g.first_name ASC
+    `, [dinnerIds]);
+
+    // Group guests by dinner_id
+    const guestsByDinner = new Map<number, DinnerGuest[]>();
+    for (const guest of allDinnerGuests) {
+      const dinnerId = guest.dinner_id;
+      if (!guestsByDinner.has(dinnerId)) {
+        guestsByDinner.set(dinnerId, []);
+      }
+      guestsByDinner.get(dinnerId)!.push(guest);
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     let sentCount = 0;
     let errorCount = 0;
 
     for (const invitation of invitations) {
-      const hostName = invitation.host_name || invitation.host;
+      const isRestaurant = invitation.venue_type === 'restaurant';
+      const dinnerLabel = isRestaurant
+        ? invitation.restaurant_name || invitation.dinner_name
+        : invitation.host_name || invitation.host;
       const dinnerDate = formatDate(invitation.dinner_date);
+      const dayOfWeek = getDayOfWeek(invitation.dinner_date);
 
       console.log(
-        `\nProcessing: ${invitation.first_name} (${invitation.email}) - ${hostName}'s dinner on ${dinnerDate}`
+        `\nProcessing: ${invitation.first_name} (${invitation.email}) - ${dinnerLabel} on ${dinnerDate}`
       );
 
       if (DRY_RUN) {
         console.log("  [DRY RUN] Would send reminder email");
+        const dinnerGuests = guestsByDinner.get(invitation.dinner_id) || [];
+        console.log(`  Guests at this dinner: ${dinnerGuests.map(g => g.first_name).join(", ")}`);
         sentCount++;
         continue;
       }
 
       try {
+        const dinnerGuests = guestsByDinner.get(invitation.dinner_id) || [];
+
+        // Build subject line based on dinner type
+        const subject = isRestaurant
+          ? `Reminder: Your dinner at ${dinnerLabel} is this ${dayOfWeek}!`
+          : `Reminder: ${dinnerLabel}'s dinner is this ${dayOfWeek}!`;
+
         const { error } = await resend.emails.send({
           from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
-          subject: `Reminder: ${hostName}'s dinner is tomorrow!`,
-          html: buildReminderEmailHtml(invitation),
+          subject,
+          html: buildReminderEmailHtml(invitation, dinnerGuests),
           replyTo: "joe@con-vive.com",
         });
 
