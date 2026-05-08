@@ -133,8 +133,13 @@ export async function GET(
     ? dinner.bring_items
     : [];
 
+  // Calculate remaining seats
+  const totalBooked = genderCounts.male + genderCounts.female + genderCounts.other;
+  const remainingSeats = dinner.total_seats - totalBooked;
+
   // Determine if couples are allowed (default to couples_allowed if not set)
-  const dinnerAllowsCouples = dinner.dinner_type !== 'singles_only';
+  // Must also have at least 2 seats remaining
+  const dinnerAllowsCouples = dinner.dinner_type !== 'singles_only' && remainingSeats >= 2;
 
   return NextResponse.json({
     invitation: {
@@ -171,5 +176,6 @@ export async function GET(
     blockReason: constraint.reason,
     dinnerAllowsCouples,
     couplePrice: dinner.price_cents * 2,
+    remainingSeats,
   });
 }
