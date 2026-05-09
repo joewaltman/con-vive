@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { Resend } from "resend";
+import Anthropic from "@anthropic-ai/sdk";
 
 const MAX_PER_RUN = 20;
 const DELAY_MS = 500;
@@ -30,11 +31,13 @@ interface BookedInvitation {
 interface DinnerGuest {
   guest_id: number;
   first_name: string;
+  one_liner: string | null;
   one_thing: string | null;
   about: string | null;
   what_do_you_do: string | null;
   curious_about: string | null;
   surprising_knowledge: string | null;
+  social_summary: string | null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -85,11 +88,85 @@ function getDayOfWeek(dateStr: string): string {
 }
 
 /**
- * Generate a one-liner from guest's free text fields.
- * Prioritizes fields and truncates to ~120 chars.
+ * Generate a one-liner using Claude AI from guest's profile data.
+ * Returns a compelling, positive summary of the person.
  */
-function generateOneLiner(guest: DinnerGuest): string {
-  // Try fields in order of preference
+async function generateOneLinerWithAI(
+  anthropic: Anthropic,
+  guest: DinnerGuest
+): Promise<string> {
+  // Collect all available info about the guest
+  const infoSources: string[] = [];
+
+  if (guest.what_do_you_do) {
+    infoSources.push(`What they do: ${guest.what_do_you_do}`);
+  }
+  if (guest.about) {
+    infoSources.push(`About them: ${guest.about}`);
+  }
+  if (guest.one_thing) {
+    infoSources.push(`One thing about them: ${guest.one_thing}`);
+  }
+  if (guest.curious_about) {
+    infoSources.push(`Curious about: ${guest.curious_about}`);
+  }
+  if (guest.surprising_knowledge) {
+    infoSources.push(`Surprising knowledge: ${guest.surprising_knowledge}`);
+  }
+  if (guest.social_summary) {
+    infoSources.push(`Social profile summary: ${guest.social_summary}`);
+  }
+
+  // If no info available, return default
+  if (infoSources.length === 0) {
+    return "Excited to meet everyone!";
+  }
+
+  const prompt = `You are writing a one-liner introduction for a dinner party guest. Based on the information below, create a single compelling sentence (max 120 characters) that makes this person sound interesting and approachable.
+
+Guidelines:
+- Keep it positive and warm
+- Focus on what makes them interesting
+- Don't mention negative things (widow, divorced, illness, etc.)
+- Don't exaggerate - stay truthful to the info provided
+- Write in third person without using their name
+- Make it conversation-starter worthy
+
+Guest information:
+${infoSources.join("\n")}
+
+Write ONLY the one-liner, nothing else:`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 100,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const content = response.content[0];
+    if (content.type === "text") {
+      let oneLiner = content.text.trim();
+      // Remove quotes if wrapped
+      oneLiner = oneLiner.replace(/^["']|["']$/g, "");
+      // Ensure max length
+      if (oneLiner.length > 150) {
+        oneLiner = oneLiner.substring(0, 147) + "...";
+      }
+      return oneLiner;
+    }
+  } catch (err) {
+    console.error(`  Error generating one-liner for ${guest.first_name}:`, err);
+  }
+
+  // Fallback to simple extraction
+  return generateFallbackOneLiner(guest);
+}
+
+/**
+ * Fallback one-liner generation without AI.
+ */
+function generateFallbackOneLiner(guest: DinnerGuest): string {
   const sources = [
     guest.what_do_you_do,
     guest.about,
@@ -101,21 +178,14 @@ function generateOneLiner(guest: DinnerGuest): string {
   for (const source of sources) {
     if (source && source.trim().length > 0) {
       let text = source.trim();
-
-      // Take first sentence if multiple
       const firstSentence = text.match(/^[^.!?]+[.!?]?/);
       if (firstSentence && firstSentence[0].length > 20) {
         text = firstSentence[0].trim();
       }
-
-      // Truncate if still too long
       if (text.length > 120) {
         text = text.substring(0, 117).trim() + "...";
       }
-
-      // Clean up - remove leading numbers/parentheses like "(1)"
       text = text.replace(/^\([0-9]+\)\s*/, "").trim();
-
       return text;
     }
   }
@@ -123,35 +193,84 @@ function generateOneLiner(guest: DinnerGuest): string {
   return "Excited to meet everyone!";
 }
 
-function buildGuestListHtml(guests: DinnerGuest[], currentGuestId: number): string {
+/**
+ * Get or generate one-liner for a guest, storing it if newly generated.
+ */
+async function getOrGenerateOneLiner(
+  pool: Pool,
+  anthropic: Anthropic | null,
+  guest: DinnerGuest,
+  dryRun: boolean
+): Promise<string> {
+  // If already has a stored one-liner, use it
+  if (guest.one_liner) {
+    return guest.one_liner;
+  }
+
+  // Generate new one-liner
+  let oneLiner: string;
+  if (anthropic) {
+    console.log(`    Generating one-liner for ${guest.first_name}...`);
+    oneLiner = await generateOneLinerWithAI(anthropic, guest);
+  } else {
+    oneLiner = generateFallbackOneLiner(guest);
+  }
+
+  // Store it for future use (unless dry run)
+  if (!dryRun && oneLiner !== "Excited to meet everyone!") {
+    try {
+      await pool.query(
+        `UPDATE guests SET one_liner = $1 WHERE id = $2`,
+        [oneLiner, guest.guest_id]
+      );
+      console.log(`    Stored one-liner for ${guest.first_name}`);
+    } catch (err) {
+      console.error(`    Failed to store one-liner for ${guest.first_name}:`, err);
+    }
+  }
+
+  return oneLiner;
+}
+
+async function buildGuestListHtml(
+  pool: Pool,
+  anthropic: Anthropic | null,
+  guests: DinnerGuest[],
+  currentGuestId: number,
+  dryRun: boolean
+): Promise<string> {
   const otherGuests = guests.filter(g => g.guest_id !== currentGuestId);
 
   if (otherGuests.length === 0) {
     return "";
   }
 
-  const guestItems = otherGuests.map(guest => {
-    const oneLiner = generateOneLiner(guest);
-    return `
+  const guestItems: string[] = [];
+  for (const guest of otherGuests) {
+    const oneLiner = await getOrGenerateOneLiner(pool, anthropic, guest, dryRun);
+    guestItems.push(`
       <div style="margin-bottom: 12px;">
-        <p style="color: #2d2d2d; font-size: 16px; font-weight: 600; margin: 0;">${guest.first_name}</p>
+        <p style="color: #2d2d2d; font-size: 16px; font-weight: 600; margin: 0;">${guest.first_name.trim()}</p>
         <p style="color: #6b6b6b; font-size: 14px; margin: 4px 0 0; line-height: 1.4;">${oneLiner}</p>
       </div>
-    `;
-  }).join("");
+    `);
+  }
 
   return `
     <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
       <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px;">Your Dining Companions</p>
-      ${guestItems}
+      ${guestItems.join("")}
     </div>
   `;
 }
 
-function buildReminderEmailHtml(
+async function buildReminderEmailHtml(
+  pool: Pool,
+  anthropic: Anthropic | null,
   invitation: BookedInvitation,
-  dinnerGuests: DinnerGuest[]
-): string {
+  dinnerGuests: DinnerGuest[],
+  dryRun: boolean
+): Promise<string> {
   const isRestaurant = invitation.venue_type === 'restaurant';
   const hostName = invitation.host_name || invitation.host;
   const restaurantName = invitation.restaurant_name || invitation.dinner_name;
@@ -178,8 +297,8 @@ function buildReminderEmailHtml(
   // Show sign-up link if guest hasn't claimed an item and there are available items
   const showBringItemsLink = !bringItemName && hasAvailableBringItems;
 
-  // Build guest list HTML
-  const guestListHtml = buildGuestListHtml(dinnerGuests, invitation.guest_id);
+  // Build guest list HTML (async because it may generate one-liners)
+  const guestListHtml = await buildGuestListHtml(pool, anthropic, dinnerGuests, invitation.guest_id, dryRun);
 
   // Different intro for restaurant vs home dinners
   const introText = isRestaurant
@@ -299,6 +418,15 @@ async function main() {
         : false,
   });
 
+  // Initialize Anthropic client if API key is available
+  let anthropic: Anthropic | null = null;
+  if (process.env.ANTHROPIC_API_KEY) {
+    anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    console.log("Anthropic client initialized for AI one-liner generation.");
+  } else {
+    console.log("No ANTHROPIC_API_KEY found, using fallback one-liner generation.");
+  }
+
   try {
     await connectWithRetry(pool);
     console.log("Connected to database.");
@@ -355,11 +483,13 @@ async function main() {
         i.dinner_id,
         i.guest_id,
         g.first_name,
+        g.one_liner,
         g.one_thing,
         g.about,
         g.what_do_you_do,
         g.curious_about,
-        g.surprising_knowledge
+        g.surprising_knowledge,
+        g.social_summary
       FROM invitations i
       JOIN guests g ON i.guest_id = g.id
       WHERE i.dinner_id = ANY($1)
@@ -394,27 +524,37 @@ async function main() {
         `\nProcessing: ${invitation.first_name} (${invitation.email}) - ${dinnerLabel} on ${dinnerDate}`
       );
 
+      const dinnerGuests = guestsByDinner.get(invitation.dinner_id) || [];
+
       if (DRY_RUN) {
         console.log("  [DRY RUN] Would send reminder email");
-        const dinnerGuests = guestsByDinner.get(invitation.dinner_id) || [];
         console.log(`  Guests at this dinner: ${dinnerGuests.map(g => g.first_name).join(", ")}`);
+        // Still generate one-liners in dry run to test the logic
+        for (const guest of dinnerGuests) {
+          if (!guest.one_liner) {
+            const oneLiner = await getOrGenerateOneLiner(pool, anthropic, guest, true);
+            console.log(`    ${guest.first_name}: ${oneLiner}`);
+          } else {
+            console.log(`    ${guest.first_name}: ${guest.one_liner} (stored)`);
+          }
+        }
         sentCount++;
         continue;
       }
 
       try {
-        const dinnerGuests = guestsByDinner.get(invitation.dinner_id) || [];
-
         // Build subject line based on dinner type
         const subject = isRestaurant
           ? `Reminder: Your dinner at ${dinnerLabel} is this ${dayOfWeek}!`
           : `Reminder: ${dinnerLabel}'s dinner is this ${dayOfWeek}!`;
 
+        const html = await buildReminderEmailHtml(pool, anthropic, invitation, dinnerGuests, DRY_RUN);
+
         const { error } = await resend.emails.send({
           from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
           subject,
-          html: buildReminderEmailHtml(invitation, dinnerGuests),
+          html,
           replyTo: "joe@con-vive.com",
         });
 

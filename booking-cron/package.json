@@ -11,6 +11,7 @@
     "send-post-dinner:dry-run": "npx tsx send-post-dinner.ts --dry-run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
     "pg": "^8.20.0",
     "resend": "^4.0.0"
   },
