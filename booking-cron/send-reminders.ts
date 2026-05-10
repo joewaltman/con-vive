@@ -279,7 +279,7 @@ async function buildReminderEmailHtml(
   const dinnerTime = invitation.dinner_time || "7:00 PM";
   const baseUrl = process.env.BASE_URL || 'https://con-vive.com';
   const bringItemsUrl = `${baseUrl}/bring/${invitation.token}`;
-  const restaurantGuideUrl = `${baseUrl}/guide-restaurant`;
+  const guideUrl = isRestaurant ? `${baseUrl}/guide-restaurant` : `${baseUrl}/guide`;
 
   let bringItemName: string | null = null;
   if (invitation.bring_item_slot && Array.isArray(invitation.bring_items)) {
@@ -328,18 +328,16 @@ async function buildReminderEmailHtml(
     </div>
     `;
 
-  // Restaurant guide section (only for restaurant dinners)
-  const restaurantGuideSection = isRestaurant
-    ? `
+  // Guide section for both restaurant and home dinners
+  const guideSection = `
     <div style="background-color: #fff8f5; border: 2px solid #c75d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">First Restaurant Dinner?</p>
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">${isRestaurant ? "First Restaurant Dinner?" : "First Con-Vive Dinner?"}</p>
       <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0 0 12px;">
         Check out our quick guide for what to expect and how to make the most of your evening.
       </p>
-      <a href="${restaurantGuideUrl}" style="display: inline-block; background-color: #c75d3a; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px;">Read the Guide</a>
+      <a href="${guideUrl}" style="display: inline-block; background-color: #c75d3a; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px;">Read the Guide</a>
     </div>
-    `
-    : "";
+    `;
 
   return `
 <!DOCTYPE html>
@@ -375,7 +373,7 @@ async function buildReminderEmailHtml(
 
     ${guestListHtml}
 
-    ${restaurantGuideSection}
+    ${guideSection}
 
     ${
       bringItemName || invitation.what_to_bring || showBringItemsLink
