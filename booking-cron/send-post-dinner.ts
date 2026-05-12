@@ -15,6 +15,8 @@ interface BookedInvitation {
   host_name: string | null;
   host: string;
   token: string;
+  venue_type: string | null;
+  restaurant_name: string | null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -58,10 +60,26 @@ function formatDate(dateStr: string): string {
 
 function buildPostDinnerEmailHtml(
   firstName: string,
-  hostName: string,
   dinnerDate: string,
-  feedbackUrl: string
+  feedbackUrl: string,
+  isRestaurant: boolean,
+  restaurantName: string | null,
+  hostName: string | null
 ): string {
+  // Build the intro paragraph based on dinner type
+  const introParagraph = isRestaurant
+    ? `We hope you had a wonderful time at last night's dinner${restaurantName ? ` at ${restaurantName}` : ''}. Sharing meals with new people is what Con-Vive is all about.`
+    : `We hope you had a wonderful time at ${hostName || 'the'}'s dinner on ${dinnerDate}. Sharing meals with new people is what Con-Vive is all about.`;
+
+  // Only show "Become a Host" section for home dinners
+  const becomeHostSection = isRestaurant ? '' : `
+    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Become a Host</p>
+      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
+        Loved being a guest? Try hosting! Open your home for a Con-Vive dinner and we'll handle the rest — matching guests, managing RSVPs, and sending reminders. You just cook and enjoy the company. Reply to this email if you're interested.
+      </p>
+    </div>`;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -74,7 +92,7 @@ function buildPostDinnerEmailHtml(
     <h1 style="color: #2d2d2d; font-size: 28px; margin: 0 0 20px;">Thanks for Coming, ${firstName}!</h1>
 
     <p style="color: #6b6b6b; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-      We hope you had a wonderful time at ${hostName}'s dinner on ${dinnerDate}. Sharing meals with new people is what Con-Vive is all about.
+      ${introParagraph}
     </p>
 
     <div style="background-color: #fff8f5; border: 2px solid #c75d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
@@ -98,14 +116,7 @@ function buildPostDinnerEmailHtml(
         We'll let you know when new dinners are available in your area. Keep an eye on your inbox!
       </p>
     </div>
-
-    <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-      <p style="color: #2d2d2d; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Become a Host</p>
-      <p style="color: #2d2d2d; font-size: 16px; line-height: 1.6; margin: 0;">
-        Loved being a guest? Try hosting! Open your home for a Con-Vive dinner and we'll handle the rest — matching guests, managing RSVPs, and sending reminders. You just cook and enjoy the company. Reply to this email if you're interested.
-      </p>
-    </div>
-
+${becomeHostSection}
     <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
 
     <p style="color: #6b6b6b; font-size: 14px; margin: 0 0 16px;">
@@ -151,10 +162,13 @@ async function main() {
         d.dinner_date,
         d.host_name,
         d.host,
-        i.token
+        i.token,
+        d.venue_type,
+        r.name as restaurant_name
       FROM invitations i
       JOIN guests g ON i.guest_id = g.id
       JOIN dinners d ON i.dinner_id = d.id
+      LEFT JOIN restaurants r ON r.id = d.restaurant_id
       LEFT JOIN attendance a ON i.id = a.invitation_id
       WHERE i.status = 'booked'
         AND d.dinner_date = CURRENT_DATE - INTERVAL '1 day'
@@ -176,15 +190,22 @@ async function main() {
     let errorCount = 0;
 
     for (const invitation of invitations) {
-      const hostName = invitation.host_name || invitation.host || 'your host';
+      const isRestaurant = invitation.venue_type === 'restaurant';
+      const hostName = invitation.host_name || invitation.host || null;
       const dinnerDate = formatDate(invitation.dinner_date);
 
+      // Build subject line based on dinner type
+      const subject = isRestaurant
+        ? `Thanks for joining last night's dinner!`
+        : `Thanks for joining ${hostName || 'the'}'s dinner!`;
+
       console.log(
-        `\nProcessing: ${invitation.first_name} (${invitation.email}) - ${hostName}'s dinner on ${dinnerDate}`
+        `\nProcessing: ${invitation.first_name} (${invitation.email}) - ${isRestaurant ? 'restaurant' : 'home'} dinner on ${dinnerDate}`
       );
 
       if (DRY_RUN) {
         console.log("  [DRY RUN] Would send post-dinner email and create attendance record");
+        console.log(`  Subject: ${subject}`);
         sentCount++;
         continue;
       }
@@ -204,8 +225,15 @@ async function main() {
         const { error } = await resend.emails.send({
           from: "Joe from Con-Vive <joe@invite.con-vive.com>",
           to: invitation.email,
-          subject: `Thanks for joining ${hostName}'s dinner!`,
-          html: buildPostDinnerEmailHtml(invitation.first_name, hostName, dinnerDate, feedbackUrl),
+          subject,
+          html: buildPostDinnerEmailHtml(
+            invitation.first_name,
+            dinnerDate,
+            feedbackUrl,
+            isRestaurant,
+            invitation.restaurant_name,
+            hostName
+          ),
           replyTo: "joe@con-vive.com",
         });
 
