@@ -510,15 +510,24 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
               No guests invited yet.
             </p>
           ) : (
-            dinner.invitations.map(invitation => (
-              <InvitationRow
-                key={invitation.id}
-                invitation={invitation}
-                onResponseChange={handleInvitationResponseChange}
-                onResend={handleResendInvite}
-                onMarkDeclined={handleMarkDeclined}
-              />
-            ))
+            [...dinner.invitations]
+              .sort((a, b) => {
+                // Put confirmed/booked guests at the top
+                const aConfirmed = a.status === 'booked';
+                const bConfirmed = b.status === 'booked';
+                if (aConfirmed && !bConfirmed) return -1;
+                if (!aConfirmed && bConfirmed) return 1;
+                return 0;
+              })
+              .map(invitation => (
+                <InvitationRow
+                  key={invitation.id}
+                  invitation={invitation}
+                  onResponseChange={handleInvitationResponseChange}
+                  onResend={handleResendInvite}
+                  onMarkDeclined={handleMarkDeclined}
+                />
+              ))
           )}
         </div>
       </div>
