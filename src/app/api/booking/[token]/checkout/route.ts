@@ -266,13 +266,10 @@ export async function POST(
   const baseUrl = getBaseUrl();
 
   try {
-    // Build product description based on booking type
+    // Build product name based on booking type
     const productName = isCoupleBooking
       ? `Con-Vive Dinner (2 guests) - ${dinnerDate}`
       : `Con-Vive Dinner - ${dinnerDate}`;
-    const productDescription = isCoupleBooking
-      ? `Dinner for two at ${dinner.dinner_name}`
-      : `Dinner at ${dinner.dinner_name}`;
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -283,7 +280,6 @@ export async function POST(
             currency: "usd",
             product_data: {
               name: productName,
-              description: productDescription,
             },
             unit_amount: totalPrice,
           },
