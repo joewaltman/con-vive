@@ -221,6 +221,7 @@ export interface Invitation {
   pricePaidCents: number | null;
   refundedAmountCents: number | null;
   bringCategory: string | null;
+  isCoupleBooking: boolean;
 }
 
 // Bring item types

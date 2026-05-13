@@ -15,7 +15,7 @@ export default function DinnerCard({ dinner, compact = false, onClick }: DinnerC
   const date = dinner.fields['Dinner Date'];
   const startTime = dinner.fields['Start Time'] || '18:00';
   const menu = dinner.fields['Menu'] || '';
-  const guestCount = dinner.fields['Guest Count'] || 7;
+  const totalSeats = dinner.fields['Total Seats'] || 8;
   const confirmedCount = dinner.confirmedCount || 0;
 
   const hostName = dinner.host
@@ -64,8 +64,8 @@ export default function DinnerCard({ dinner, compact = false, onClick }: DinnerC
       onClick={onClick}
       className="w-full text-left p-4 bg-white border border-gray-200 rounded-lg hover:border-terracotta/50 hover:shadow-sm transition-all"
     >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <h3 className="font-semibold text-gray-900 truncate">{name}</h3>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
             <span>{formattedDate}</span>
@@ -86,7 +86,7 @@ export default function DinnerCard({ dinner, compact = false, onClick }: DinnerC
 
         <div className="text-right shrink-0 ml-4">
           <div className="text-lg font-semibold text-gray-900">
-            {confirmedCount} <span className="text-gray-400 font-normal">/ {guestCount}</span>
+            {confirmedCount} <span className="text-gray-400 font-normal">/ {totalSeats}</span>
           </div>
           <div className="text-xs text-gray-500">confirmed</div>
 

@@ -20,29 +20,34 @@ export default function DinnerStatusHeader({ dinner }: DinnerStatusHeaderProps) 
   const stats = useMemo(() => {
     const invitations = dinner.invitations || [];
 
-    // Count by status
-    const confirmed = invitations.filter(i => i.status === 'confirmed' || i.response === 'Accepted');
+    // Count by status (booked = paid)
+    const bookedInvitations = invitations.filter(i => i.status === 'booked' || i.response === 'Accepted');
     const pending = invitations.filter(i =>
       i.status === 'invited' ||
       i.status === 'checkout_pending' ||
       (!i.status && i.response === 'Invited')
     );
 
-    // Gender breakdown
-    const confirmedMale = confirmed.filter(i => i.gender === 'Male').length;
-    const confirmedFemale = confirmed.filter(i => i.gender === 'Female').length;
+    // Count confirmed seats (couple bookings count as 2)
+    const confirmedSeats = bookedInvitations.reduce((sum, i) => {
+      return sum + (i.isCoupleBooking ? 2 : 1);
+    }, 0);
+
+    // Gender breakdown (primary guests only for now)
+    const confirmedMale = bookedInvitations.filter(i => i.gender === 'Male').length;
+    const confirmedFemale = bookedInvitations.filter(i => i.gender === 'Female').length;
     const pendingMale = pending.filter(i => i.gender === 'Male').length;
     const pendingFemale = pending.filter(i => i.gender === 'Female').length;
 
     // Bring items claimed
     const bringClaims = {
-      wine: invitations.filter(i => i.bringCategory === 'wine' && (i.status === 'confirmed' || i.response === 'Accepted')).length,
-      appetizer: invitations.filter(i => i.bringCategory === 'appetizer' && (i.status === 'confirmed' || i.response === 'Accepted')).length,
-      dessert: invitations.filter(i => i.bringCategory === 'dessert' && (i.status === 'confirmed' || i.response === 'Accepted')).length,
+      wine: invitations.filter(i => i.bringCategory === 'wine' && (i.status === 'booked' || i.response === 'Accepted')).length,
+      appetizer: invitations.filter(i => i.bringCategory === 'appetizer' && (i.status === 'booked' || i.response === 'Accepted')).length,
+      dessert: invitations.filter(i => i.bringCategory === 'dessert' && (i.status === 'booked' || i.response === 'Accepted')).length,
     };
 
     return {
-      confirmed: confirmed.length,
+      confirmed: confirmedSeats,
       pending: pending.length,
       confirmedMale,
       confirmedFemale,

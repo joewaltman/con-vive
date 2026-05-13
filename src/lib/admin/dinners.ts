@@ -207,6 +207,7 @@ export async function fetchDinner(id: string): Promise<Dinner> {
     pricePaidCents: row.price_paid_cents != null ? Number(row.price_paid_cents) : null,
     refundedAmountCents: row.refunded_amount_cents != null ? Number(row.refunded_amount_cents) : null,
     bringCategory: row.bring_category || null,
+    isCoupleBooking: row.is_couple_booking || false,
   }));
 
   // Fetch bring items with claims
