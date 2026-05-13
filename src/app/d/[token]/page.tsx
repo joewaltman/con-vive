@@ -365,7 +365,7 @@ export default function BookingPage({
               </p>
               <p className="body-sm mt-1 text-warm-gray">
                 {dinner.venue_type === 'restaurant'
-                  ? 'Covers food only. Drinks paid separately at the restaurant.'
+                  ? 'Covers food, service, and tax. Drinks paid separately at the restaurant.'
                   : 'Covers dinner, drinks & the experience'}
               </p>
             </div>
