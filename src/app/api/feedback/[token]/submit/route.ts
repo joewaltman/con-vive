@@ -10,6 +10,13 @@ interface TokenRow {
   completed_at: Date | null;
 }
 
+interface InvitationRow {
+  id: number;
+  dinner_id: number;
+  guest_id: number;
+  status: string | null;
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -37,21 +44,65 @@ export async function POST(
       }
     }
 
-    // Find the token
-    const tokenResult = await pool.query<TokenRow>(`
+    // First, try to find in feedback_tokens table
+    let tokenResult = await pool.query<TokenRow>(`
       SELECT id, dinner_id, guest_id, expires_at, completed_at
       FROM feedback_tokens
       WHERE token = $1
     `, [token]);
 
-    if (tokenResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Token not found' },
-        { status: 404 }
-      );
-    }
+    let feedbackToken: TokenRow;
 
-    const feedbackToken = tokenResult.rows[0];
+    if (tokenResult.rows.length === 0) {
+      // Not found in feedback_tokens, try invitation token
+      const invitationResult = await pool.query<InvitationRow>(`
+        SELECT id, dinner_id, guest_id, status
+        FROM invitations
+        WHERE token = $1
+      `, [token]);
+
+      if (invitationResult.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Token not found' },
+          { status: 404 }
+        );
+      }
+
+      const invitation = invitationResult.rows[0];
+
+      // Verify the invitation was booked
+      if (invitation.status !== 'booked' && invitation.status !== 'confirmed') {
+        return NextResponse.json(
+          { error: 'Invitation not confirmed' },
+          { status: 404 }
+        );
+      }
+
+      // Check if a feedback token already exists for this guest/dinner
+      const existingFeedbackResult = await pool.query<TokenRow>(`
+        SELECT id, dinner_id, guest_id, expires_at, completed_at
+        FROM feedback_tokens
+        WHERE dinner_id = $1 AND guest_id = $2
+      `, [invitation.dinner_id, invitation.guest_id]);
+
+      if (existingFeedbackResult.rows.length > 0) {
+        feedbackToken = existingFeedbackResult.rows[0];
+      } else {
+        // Create a new feedback token for this invitation
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        const newTokenResult = await pool.query<TokenRow>(`
+          INSERT INTO feedback_tokens (dinner_id, guest_id, token, expires_at)
+          VALUES ($1, $2, encode(gen_random_bytes(16), 'hex'), $3)
+          RETURNING id, dinner_id, guest_id, expires_at, completed_at
+        `, [invitation.dinner_id, invitation.guest_id, expiresAt]);
+
+        feedbackToken = newTokenResult.rows[0];
+      }
+    } else {
+      feedbackToken = tokenResult.rows[0];
+    }
 
     // Check if already completed
     if (feedbackToken.completed_at) {
