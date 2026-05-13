@@ -512,11 +512,11 @@ export default function DinnerDetail({ dinnerId }: DinnerDetailProps) {
           ) : (
             [...dinner.invitations]
               .sort((a, b) => {
-                // Put confirmed guests at the top
-                const aConfirmed = a.status === 'confirmed';
-                const bConfirmed = b.status === 'confirmed';
-                if (aConfirmed && !bConfirmed) return -1;
-                if (!aConfirmed && bConfirmed) return 1;
+                // Put booked (paid) guests at the top
+                const aBooked = a.status === 'booked';
+                const bBooked = b.status === 'booked';
+                if (aBooked && !bBooked) return -1;
+                if (!aBooked && bBooked) return 1;
                 return 0;
               })
               .map(invitation => (

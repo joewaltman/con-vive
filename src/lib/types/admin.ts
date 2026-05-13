@@ -261,7 +261,7 @@ export interface ReminderResponse {
 // Booking system types
 export type DinnerStatus = 'draft' | 'open' | 'full' | 'completed' | 'cancelled';
 export type DinnerType = 'singles_only' | 'couples_allowed';
-export type InvitationStatus = 'invited' | 'checkout_pending' | 'confirmed' | 'cancelled' | 'declined' | 'expired';
+export type InvitationStatus = 'invited' | 'checkout_pending' | 'booked' | 'confirmed' | 'cancelled' | 'declined' | 'expired';
 
 export interface BringSlots {
   wine: number;
