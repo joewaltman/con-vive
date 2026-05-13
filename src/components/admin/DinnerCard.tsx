@@ -14,7 +14,10 @@ export default function DinnerCard({ dinner, compact = false, onClick }: DinnerC
   const name = dinner.fields['Dinner Name'] || 'Unnamed Dinner';
   const date = dinner.fields['Dinner Date'];
   const startTime = dinner.fields['Start Time'] || '18:00';
-  const menu = dinner.fields['Menu'] || '';
+  const rawMenu = dinner.fields['Menu'] || '';
+  // Take first line only and limit to 80 chars for display
+  const menuFirstLine = rawMenu.split('\n')[0] || '';
+  const menu = menuFirstLine.length > 80 ? menuFirstLine.slice(0, 80) + '...' : menuFirstLine;
   const totalSeats = dinner.fields['Total Seats'] || 8;
   const confirmedCount = dinner.confirmedCount || 0;
 
