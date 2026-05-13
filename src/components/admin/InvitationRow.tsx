@@ -80,7 +80,7 @@ export default function InvitationRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <a
-            href={`/?guest=${invitation.guestId}`}
+            href={`/admin?guest=${invitation.guestId}`}
             className="font-medium text-gray-900 hover:text-terracotta hover:underline"
           >
             {invitation.guestName}

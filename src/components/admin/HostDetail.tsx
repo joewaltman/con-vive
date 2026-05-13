@@ -227,7 +227,7 @@ export default function HostDetail({ host, onSave, onBack, showBackButton }: Hos
             {linkedGuest && (
               <p className="mt-2 text-xs text-gray-500">
                 <a
-                  href={`/?guest=${linkedGuest.id}`}
+                  href={`/admin?guest=${linkedGuest.id}`}
                   className="text-terracotta hover:underline"
                 >
                   View guest profile
