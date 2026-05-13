@@ -28,6 +28,7 @@ function rowToInvitation(row: Record<string, unknown>): Invitation {
     pricePaidCents: row.price_paid_cents != null ? Number(row.price_paid_cents) : null,
     refundedAmountCents: row.refunded_amount_cents != null ? Number(row.refunded_amount_cents) : null,
     bringCategory: row.bring_category ? String(row.bring_category) : null,
+    isCoupleBooking: Boolean(row.is_couple_booking),
   };
 }
 
