@@ -24,6 +24,8 @@ export async function POST(
         d.price_cents,
         d.host_guest_id,
         d.venue_type,
+        d.notes as dinner_notes,
+        d.parking_note,
         h.first_name as host_first_name,
         r.name as restaurant_name
       FROM invitations i
@@ -91,6 +93,8 @@ export async function POST(
         magicLink: bookingLink,
         venueType: invitation.venue_type || 'home',
         restaurantName: invitation.restaurant_name,
+        notes: invitation.dinner_notes,
+        parkingNote: invitation.parking_note,
       }),
     });
 

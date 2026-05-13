@@ -151,6 +151,8 @@ export async function POST(
             magicLink: bookingLink,
             venueType: dinner.fields['Venue Type'] || 'home',
             restaurantName,
+            notes: dinner.fields['Notes'],
+            parkingNote: dinner.fields['Parking Note'],
           }),
         });
 

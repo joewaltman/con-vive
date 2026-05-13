@@ -23,6 +23,8 @@ interface InviteEmailProps {
   magicLink: string;
   venueType?: string;
   restaurantName?: string | null;
+  notes?: string | null;
+  parkingNote?: string | null;
 }
 
 export default function InviteEmail({
@@ -36,6 +38,8 @@ export default function InviteEmail({
   magicLink,
   venueType = 'home',
   restaurantName,
+  notes,
+  parkingNote,
 }: InviteEmailProps) {
   const safeHostFirstName = hostFirstName || 'your host';
   const isRestaurant = venueType === 'restaurant';
@@ -74,13 +78,32 @@ export default function InviteEmail({
                 <strong>Host:</strong> {safeHostFirstName}
               </Text>
             )}
-            <Text style={detailsText}>
-              <strong>Menu:</strong> {menu}
-            </Text>
+            {parkingNote && (
+              <Text style={detailsText}>
+                <strong>Parking:</strong> {parkingNote}
+              </Text>
+            )}
             <Text style={detailsText}>
               <strong>Price:</strong> ${priceDollars}
             </Text>
           </Section>
+
+          {menu && (
+            <Section style={menuSection}>
+              <Text style={menuHeading}>Menu</Text>
+              {menu.split('\n').map((line, i) => (
+                <Text
+                  key={i}
+                  style={line.trim() === '' ? menuLineSpacer : menuLine}
+                >
+                  {line || '\u00A0'}
+                </Text>
+              ))}
+              {notes && (
+                <Text style={notesText}>{notes}</Text>
+              )}
+            </Section>
+          )}
 
           <Text style={paragraph}>
             Spots are limited. If you would like to join, please confirm your spot below.
@@ -194,4 +217,41 @@ const footerSmall = {
   fontSize: '13px',
   marginTop: '24px',
   textAlign: 'center' as const,
+};
+
+const menuSection = {
+  backgroundColor: '#FFFFFF',
+  borderRadius: '8px',
+  padding: '24px',
+  margin: '0 0 24px',
+  border: '1px solid #E5E7EB',
+};
+
+const menuHeading = {
+  color: '#B85C38',
+  fontSize: '18px',
+  fontWeight: '600',
+  margin: '0 0 16px',
+};
+
+const menuLine = {
+  color: '#374151',
+  fontSize: '15px',
+  lineHeight: '1.5',
+  margin: '0',
+};
+
+const menuLineSpacer = {
+  color: '#374151',
+  fontSize: '15px',
+  lineHeight: '1.5',
+  margin: '8px 0 0',
+};
+
+const notesText = {
+  color: '#6B7280',
+  fontSize: '14px',
+  lineHeight: '22px',
+  margin: '16px 0 0',
+  fontStyle: 'italic' as const,
 };
